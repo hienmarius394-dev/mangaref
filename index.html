@@ -117,13 +117,14 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
+              model: "claude-sonnet-4-6",
               max_tokens: 300,
               system: SYSTEM,
               messages: [{ role: "user", content: `Scène : "${scene}"` }]
             })
           });
           const data = await res.json();
+          console.log("API response:", JSON.stringify(data)); // debug
           const text = data.content?.map(b => b.text || "").join("") || "";
           const parsed = parse(text);
           if (!parsed.dessin) {
@@ -131,7 +132,8 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           } else {
             setResult(parsed);
           }
-        } catch {
+        } catch (err) {
+          console.error("Fetch error:", err);
           setError("Erreur de connexion, réessaie !");
         } finally {
           setLoading(false);
