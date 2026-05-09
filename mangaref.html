@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MangaRef v7</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    textarea { font-family: inherit; }
+    textarea::placeholder { color: #9ca3af; }
+    textarea:focus { outline: none; border-color: #e60023 !important; box-shadow: 0 0 0 3px #e6002318; }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
+
+    const SYSTEM = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
+
+Quand un artiste décrit une scène, tu génères 2 requêtes Pinterest + un conseil technique.
+
+═══ FORMULES PINTEREST TESTÉES ═══
+- PINTEREST_DESSIN : "drawing of" + sujet + action + contexte. STOP. MAX 5 mots après "drawing of". Testé : "drawing of man grabbed by collar" = parfait. "drawing of man grabbing shirt collar lift slam against wall" = éparpillé.
+- PINTEREST_REALISTE : sujet + action + contexte. MAX 5 mots. Pas de "drawing".
+
+RÈGLE SCÈNE À 2 PERSONNAGES : décris UNIQUEMENT celui qui subit l'action. Ignore celui qui agit. Ex: "un mec attrape quelqu'un par le col" → "drawing of man grabbed by collar" (pas "man grabbing someone collar").
+
+INTERDIT : "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style"
+INTERDIT : détails de pose, d'expression, de vêtement dans la requête — ça noie la recherche.
+
+═══ FORMAT DE RÉPONSE (STRICTEMENT) ═══
+PINTEREST_DESSIN: ["drawing of" + MAX 5 mots]
+PINTEREST_REALISTE: [MAX 5 mots, sans "drawing"]
+CONSEIL: [3-4 phrases en français, technique et précis, comme un ami dessinateur professionnel]
+
+═══ EXEMPLES ═══
+
+Scène : "un mec qui se prend un direct dans la mâchoire"
+PINTEREST_DESSIN: drawing of man punch face jaw impact
+PINTEREST_REALISTE: man hit face jaw punch slow motion
+CONSEIL: Le moment du contact et la réaction sont deux dessins différents — choisis lequel tu veux montrer. Si c'est l'impact : la peau et la chair se déforment du côté du poing, les lèvres se retroussent. Si c'est la réaction : la tête part en rotation, l'épaule suit, le corps pivote. Ajoute de la sueur ou de la salive qui vole pour montrer la violence du choc. Un angle légèrement en contre-plongée rend le coup écrasant.
+
+Scène : "un personnage qui dort sur une chaise"
+PINTEREST_DESSIN: drawing of man sleeping on chair
+PINTEREST_REALISTE: man asleep on chair photo
+CONSEIL: La chaise dicte la pose — selon qu'elle a des accoudoirs ou non, le corps s'y abandonne différemment. Sans accoudoir, les bras tombent librement et la tête part sur le côté ou en arrière. Observe la gravité : tout ce qui n'est pas soutenu s'affaisse. Le poids du corps crée des plis dans les vêtements aux points de contact avec la chaise.
+
+Scène : "un personnage qui saute depuis un toit"
+PINTEREST_DESSIN: drawing of character jumping off rooftop
+PINTEREST_REALISTE: person jumping rooftop edge action photo
+CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se détendent, les orteils quittent le bord en dernier. En chute libre, les vêtements et les cheveux montent vers le haut (contre-intuitif mais juste). Pour la vitesse, étire légèrement les proportions verticalement. Le regard vers le bas avec les yeux écarquillés raconte la hauteur mieux que n'importe quel décor.`;
+
+    function LinkCard({ href, emoji, label, color, query }) {
+      const [hov, setHov] = useState(false);
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer"
+          onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+          style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "16px 18px",
+            background: hov ? `${color}08` : "#fff",
+            border: `2px solid ${hov ? color : "#e5e7eb"}`,
+            borderRadius: 14, textDecoration: "none",
+            transition: "all 0.15s", marginBottom: 10,
+          }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 11,
+            background: hov ? color : `${color}18`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, flexShrink: 0, transition: "background 0.15s",
+          }}>{emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 3 }}>{label}</div>
+            <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {query}
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: hov ? color : "#d1d5db", flexShrink: 0, transition: "color 0.15s" }}>→</div>
+        </a>
+      );
+    }
+
+    function MangaRef() {
+      const [scene, setScene]   = useState("");
+      const [loading, setLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError]   = useState(null);
+
+      const parse = (text) => {
+        const getLine = (label) => {
+          const re = new RegExp(`${label}:\\s*([^\\n]+)`, "i");
+          const m = text.match(re);
+          return m ? m[1].trim() : "";
+        };
+        const conseilMatch = text.match(/CONSEIL:\s*([\s\S]+)/i);
+        return {
+          dessin:   getLine("PINTEREST_DESSIN"),
+          realiste: getLine("PINTEREST_REALISTE"),
+          conseil:  conseilMatch ? conseilMatch[1].trim() : "",
+        };
+      };
+
+      const search = async () => {
+        if (!scene.trim() || loading) return;
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 300,
+              system: SYSTEM,
+              messages: [{ role: "user", content: `Scène : "${scene}"` }]
+            })
+          });
+          const data = await res.json();
+          const text = data.content?.map(b => b.text || "").join("") || "";
+          const parsed = parse(text);
+          if (!parsed.dessin) {
+            setError("Réessaie en décrivant mieux ta scène !");
+          } else {
+            setResult(parsed);
+          }
+        } catch {
+          setError("Erreur de connexion, réessaie !");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const active = scene.trim() && !loading;
+
+      return (
+        <div style={{
+          minHeight: "100vh", background: "#f3f4f6",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          padding: "40px 16px 80px",
+        }}>
+          <div style={{ marginBottom: 4, display: "flex", alignItems: "baseline" }}>
+            <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
+            <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
+          </div>
+          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 28, textAlign: "center" }}>
+            Décris ta scène → trouve tes références Pinterest
+          </p>
+
+          <div style={{
+            width: "100%", maxWidth: 480,
+            background: "#fff", borderRadius: 16,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
+            padding: 22, marginBottom: 14,
+          }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>
+              Ta scène
+            </label>
+            <textarea
+              value={scene}
+              onChange={e => setScene(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && search()}
+              placeholder="Ex : Un mec qui reçoit un direct dans la mâchoire..."
+              rows={3}
+              style={{
+                width: "100%", border: "2px solid #e5e7eb", borderRadius: 10,
+                padding: "11px 13px", fontSize: 14, lineHeight: 1.6,
+                resize: "none", color: "#111827", transition: "all 0.15s",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
+              <span style={{ fontSize: 11, color: "#d1d5db" }}>⌘ + Entrée pour lancer</span>
+            </div>
+            <button onClick={search} disabled={!active}
+              style={{
+                width: "100%", padding: "13px",
+                background: active ? "#e60023" : "#fecdd3",
+                color: active ? "#fff" : "#fca5a5",
+                border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700,
+                cursor: active ? "pointer" : "default",
+                transition: "all 0.15s",
+              }}>
+              {loading ? "⏳ Recherche en cours..." : "📌 Trouver mes références"}
+            </button>
+          </div>
+
+          {error && (
+            <div style={{
+              width: "100%", maxWidth: 480, padding: "13px 16px",
+              background: "#fef2f2", border: "1.5px solid #fecaca",
+              borderRadius: 10, marginBottom: 12,
+            }}>
+              <p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p>
+            </div>
+          )}
+
+          {result && !loading && (
+            <div style={{ width: "100%", maxWidth: 480 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1 }}>Pinterest</span>
+                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+              </div>
+
+              {result.dessin && (
+                <LinkCard href={pinterestUrl(result.dessin)}
+                  emoji="🎨" label="Illustration / Dessin"
+                  color="#e60023" query={result.dessin} />
+              )}
+              {result.realiste && (
+                <LinkCard href={pinterestUrl(result.realiste)}
+                  emoji="📷" label="Photo réaliste"
+                  color="#9f1239" query={result.realiste} />
+              )}
+
+              {result.conseil && (
+                <div style={{
+                  background: "#fff",
+                  border: "1.5px solid #e5e7eb",
+                  borderLeft: "4px solid #e60023",
+                  borderRadius: 12,
+                  padding: "15px 17px",
+                  marginTop: 4,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+                    <span style={{ fontSize: 15 }}>🎌</span>
+                    <span style={{ fontWeight: 700, fontSize: 11, color: "#374151", textTransform: "uppercase", letterSpacing: 0.8 }}>
+                      Conseil du Sensei
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13.5, color: "#374151", lineHeight: 1.8 }}>{result.conseil}</p>
+                </div>
+              )}
+
+              <div style={{ textAlign: "center", marginTop: 22 }}>
+                <button onClick={() => { setResult(null); setScene(""); }}
+                  style={{ background: "none", border: "none", color: "#e60023", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  ↺ Nouvelle recherche
+                </button>
+              </div>
+            </div>
+          )}
+
+          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>MangaRef v7 — Pour les artistes 🎌</p>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<MangaRef />);
+  </script>
+</body>
+</html>
