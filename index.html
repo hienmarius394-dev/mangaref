@@ -51,6 +51,82 @@
 
     const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
 
+    // ═══ TEXTES BILINGUES ═══
+    const T = {
+      fr: {
+        tagline: "Décris ta scène → trouve tes références Pinterest",
+        sceneLabel: "Ta scène",
+        placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
+        btnSearch: "📌 Trouver mes références",
+        btnLoading: "⏳ Recherche en cours...",
+        btnNew: "↺ Nouvelle recherche",
+        shortcut: "⌘ + Entrée pour lancer",
+        examplesTitle: "Exemples de scènes",
+        historyTitle: "Recherches récentes",
+        pinterestLabel: "Pinterest",
+        drawLabel: "Illustration / Dessin",
+        realLabel: "Photo réaliste",
+        senseiLabel: "Conseil du Sensei",
+        scenes: (n) => `${n} scène${n > 1 ? "s" : ""} analysée${n > 1 ? "s" : ""}`,
+        errRetry: "Réessaie en décrivant mieux ta scène !",
+        errConn: "Erreur de connexion, réessaie !",
+        footer: "MangaRef v8 — Pour les artistes 🎌",
+      },
+      en: {
+        tagline: "Describe your scene → find your Pinterest references",
+        sceneLabel: "Your scene",
+        placeholder: "Ex: A guy getting punched in the jaw...",
+        btnSearch: "📌 Find my references",
+        btnLoading: "⏳ Searching...",
+        btnNew: "↺ New search",
+        shortcut: "⌘ + Enter to search",
+        examplesTitle: "Scene examples",
+        historyTitle: "Recent searches",
+        pinterestLabel: "Pinterest",
+        drawLabel: "Illustration / Drawing",
+        realLabel: "Realistic photo",
+        senseiLabel: "Sensei's Tip",
+        scenes: (n) => `${n} scene${n > 1 ? "s" : ""} analyzed`,
+        errRetry: "Try describing your scene more precisely!",
+        errConn: "Connection error, please try again!",
+        footer: "MangaRef v8 — For artists 🎌",
+      },
+    };
+
+    const EXEMPLES_FR = [
+      "Un mec qui reçoit un coup de poing",
+      "Une fille qui pleure sous la pluie",
+      "Deux persos dos à dos",
+      "Un personnage qui tombe à genoux",
+      "Une main qui attrape un poignet",
+      "Un mec appuyé contre un mur",
+    ];
+
+    const EXEMPLES_EN = [
+      "A guy getting punched in the face",
+      "A girl crying in the rain",
+      "Two characters standing back to back",
+      "A character falling to their knees",
+      "A hand grabbing a wrist",
+      "A guy leaning against a wall",
+    ];
+
+    const LOADING_MSGS_FR = [
+      "Le Sensei consulte ses grimoires...",
+      "Analyse de la scène en cours...",
+      "Recherche des meilleures références...",
+      "Le Sensei affûte son pinceau...",
+      "Exploration des archives visuelles...",
+    ];
+
+    const LOADING_MSGS_EN = [
+      "The Sensei consults the archives...",
+      "Analyzing your scene...",
+      "Searching for the best references...",
+      "The Sensei sharpens his brush...",
+      "Exploring the visual database...",
+    ];
+
     // ═══ COMPTEUR GLOBAL (localStorage) ═══
     const getCount = () => {
       try { return parseInt(localStorage.getItem("mangaref_count") || "0"); } catch { return 0; }
@@ -74,7 +150,7 @@
       } catch {}
     };
 
-    const SYSTEM = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
+    const SYSTEM_FR = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
 
 Quand un artiste décrit une scène, tu génères 2 requêtes Pinterest + un conseil technique.
 
@@ -109,23 +185,41 @@ PINTEREST_DESSIN: drawing of character jumping off rooftop
 PINTEREST_REALISTE: person jumping rooftop edge action photo
 CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se détendent, les orteils quittent le bord en dernier. En chute libre, les vêtements et les cheveux montent vers le haut (contre-intuitif mais juste). Pour la vitesse, étire légèrement les proportions verticalement. Le regard vers le bas avec les yeux écarquillés raconte la hauteur mieux que n'importe quel décor.`;
 
-    const EXEMPLES = [
-      "Un mec qui reçoit un coup de poing",
-      "Une fille qui pleure sous la pluie",
-      "Deux persos dos à dos",
-      "Un personnage qui tombe à genoux",
-      "Une main qui attrape un poignet",
-      "Un mec appuyé contre un mur",
-    ];
+    const SYSTEM_EN = `You are MangaRef, an expert assistant helping artists (manga, webtoon, comics, fanart) find ultra-precise visual references.
 
-    // ═══ MESSAGES DE CHARGEMENT ═══
-    const LOADING_MSGS = [
-      "Le Sensei consulte ses grimoires...",
-      "Analyse de la scène en cours...",
-      "Recherche des meilleures références...",
-      "Le Sensei affûte son pinceau...",
-      "Exploration des archives visuelles...",
-    ];
+When an artist describes a scene, generate 2 Pinterest queries + a technical tip.
+
+═══ TESTED PINTEREST FORMULAS ═══
+- PINTEREST_DESSIN: "drawing of" + subject + action + context. STOP. MAX 5 words after "drawing of". Tested: "drawing of man grabbed by collar" = perfect. "drawing of man grabbing shirt collar lift slam against wall" = scattered results.
+- PINTEREST_REALISTE: subject + action + context. MAX 5 words. No "drawing".
+
+2-CHARACTER SCENE RULE: describe ONLY the one receiving the action. Ignore the one acting. Ex: "a guy grabs someone by the collar" → "drawing of man grabbed by collar" (not "man grabbing someone collar").
+
+FORBIDDEN: "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style"
+FORBIDDEN: pose details, expressions, clothing in the query — it scatters results.
+
+═══ RESPONSE FORMAT (STRICT) ═══
+PINTEREST_DESSIN: ["drawing of" + MAX 5 words]
+PINTEREST_REALISTE: [MAX 5 words, no "drawing"]
+CONSEIL: [3-4 sentences in English, technical and precise, like a professional artist friend]
+
+═══ EXAMPLES ═══
+
+Scene: "a guy getting punched in the jaw"
+PINTEREST_DESSIN: drawing of man punch face jaw impact
+PINTEREST_REALISTE: man hit face jaw punch slow motion
+CONSEIL: The moment of contact and the reaction are two different drawings — choose which one you want to show. For impact: flesh deforms toward the fist, lips curl back. For reaction: head rotates, shoulder follows, body pivots. Add flying sweat or saliva to convey the violence. A slight low-angle shot makes the punch feel crushing.
+
+Scene: "a character sleeping on a chair"
+PINTEREST_DESSIN: drawing of man sleeping on chair
+PINTEREST_REALISTE: man asleep on chair photo
+CONSEIL: The chair dictates the pose — armrests or not completely changes how the body surrenders to it. Without armrests, arms fall freely and the head drops to the side or back. Study gravity: anything unsupported sags. Body weight creates fabric folds at every contact point with the chair.
+
+Scene: "a character jumping from a rooftop"
+PINTEREST_DESSIN: drawing of character jumping off rooftop
+PINTEREST_REALISTE: person jumping rooftop edge action photo
+CONSEIL: Show the leg push at the moment of jump — knees extend, toes leave the edge last. In freefall, clothes and hair rise upward (counterintuitive but accurate). For speed, stretch proportions slightly vertically. Eyes wide open looking down tells the height better than any background.`;
+
 
     function CopyButton({ text }) {
       const [copied, setCopied] = useState(false);
@@ -208,7 +302,14 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
       const [error, setError]     = useState(null);
       const [count, setCount]     = useState(getCount());
       const [history, setHistory] = useState(getHistory());
-      const [loadMsg, setLoadMsg] = useState(LOADING_MSGS[0]);
+      const [lang, setLang]       = useState("fr");
+
+      const t       = T[lang];
+      const EXEMPLES = lang === "fr" ? EXEMPLES_FR : EXEMPLES_EN;
+      const LOADING_MSGS = lang === "fr" ? LOADING_MSGS_FR : LOADING_MSGS_EN;
+      const SYSTEM  = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
+
+      const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
 
       const parse = (text) => {
         const getLine = (label) => {
@@ -244,7 +345,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           const text = data.content?.map(b => b.text || "").join("") || "";
           const parsed = parse(text);
           if (!parsed.dessin) {
-            setError("Réessaie en décrivant mieux ta scène !");
+            setError(t.errRetry);
           } else {
             setResult(parsed);
             addToHistory(q);
@@ -253,7 +354,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             setCount(newCount);
           }
         } catch (err) {
-          setError("Erreur de connexion, réessaie !");
+          setError(t.errConn);
         } finally {
           setLoading(false);
         }
@@ -279,12 +380,26 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           padding: "40px 16px 80px",
         }}>
           {/* Header */}
-          <div style={{ marginBottom: 4, display: "flex", alignItems: "baseline" }}>
-            <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
-            <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
+          <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "baseline" }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
+              <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
+            </div>
+            <button
+              onClick={() => { setLang(l => l === "fr" ? "en" : "fr"); setResult(null); setScene(""); setError(null); }}
+              title={lang === "fr" ? "Switch to English" : "Passer en français"}
+              style={{
+                background: "#fff", border: "1.5px solid #e5e7eb",
+                borderRadius: 20, padding: "4px 10px",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                color: "#374151", transition: "all 0.15s",
+                display: "flex", alignItems: "center", gap: 5,
+              }}>
+              {lang === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
+            </button>
           </div>
           <p style={{ fontSize: 13, color: "#6b7280", marginBottom: count > 0 ? 8 : 28, textAlign: "center" }}>
-            Décris ta scène → trouve tes références Pinterest
+            {t.tagline}
           </p>
 
           {/* Compteur */}
@@ -296,7 +411,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             }}>
               <span style={{ fontSize: 14 }}>🎨</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#e60023" }}>
-                {count} scène{count > 1 ? "s" : ""} analysée{count > 1 ? "s" : ""}
+                {t.scenes(count)}
               </span>
             </div>
           )}
@@ -309,13 +424,13 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             padding: 22, marginBottom: 14,
           }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>
-              Ta scène
+              {t.sceneLabel}
             </label>
             <textarea
               value={scene}
               onChange={e => setScene(e.target.value)}
               onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && search()}
-              placeholder="Ex : Un mec qui reçoit un direct dans la mâchoire..."
+              placeholder={t.placeholder}
               rows={3}
               style={{
                 width: "100%", border: "2px solid #e5e7eb", borderRadius: 10,
@@ -324,7 +439,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
               }}
             />
             <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: "#d1d5db" }}>⌘ + Entrée pour lancer</span>
+              <span style={{ fontSize: 11, color: "#d1d5db" }}>{t.shortcut}</span>
             </div>
             <div style={{ marginBottom: 10, marginTop: 4 }}></div>
             <button onClick={() => search()} disabled={!active}
@@ -336,7 +451,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
                 cursor: active ? "pointer" : "default",
                 transition: "all 0.15s",
               }}>
-              {loading ? "⏳ Recherche en cours..." : "📌 Trouver mes références"}
+              {loading ? t.btnLoading : t.btnSearch}
             </button>
           </div>
 
@@ -344,7 +459,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           {!result && !loading && (
             <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-                Exemples de scènes
+                {t.examplesTitle}
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {EXEMPLES.map(ex => (
@@ -366,7 +481,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           {!result && !loading && history.length > 0 && (
             <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-                Recherches récentes
+                {t.historyTitle}
               </p>
               {history.map((h, i) => (
                 <button key={i} onClick={() => useHistory(h)} className="hist-item"
@@ -408,18 +523,18 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             <div style={{ width: "100%", maxWidth: 480 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1 }}>Pinterest</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1 }}>{t.pinterestLabel}</span>
                 <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
               </div>
 
               {result.dessin && (
                 <LinkCard href={pinterestUrl(result.dessin)}
-                  emoji="🎨" label="Illustration / Dessin"
+                  emoji="🎨" label={t.drawLabel}
                   color="#e60023" query={result.dessin} />
               )}
               {result.realiste && (
                 <LinkCard href={pinterestUrl(result.realiste)}
-                  emoji="📷" label="Photo réaliste"
+                  emoji="📷" label={t.realLabel}
                   color="#9f1239" query={result.realiste} />
               )}
 
@@ -435,7 +550,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
                     <span style={{ fontSize: 15 }}>🎌</span>
                     <span style={{ fontWeight: 700, fontSize: 11, color: "#374151", textTransform: "uppercase", letterSpacing: 0.8 }}>
-                      Conseil du Sensei
+                      {t.senseiLabel}
                     </span>
                   </div>
                   <p style={{ fontSize: 13.5, color: "#374151", lineHeight: 1.8 }}>{result.conseil}</p>
@@ -445,13 +560,13 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
               <div style={{ textAlign: "center", marginTop: 22 }}>
                 <button onClick={() => { setResult(null); setScene(""); }}
                   style={{ background: "none", border: "none", color: "#e60023", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  ↺ Nouvelle recherche
+                  {t.btnNew}
                 </button>
               </div>
             </div>
           )}
 
-          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>MangaRef v8 — Pour les artistes 🎌</p>
+          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>{t.footer}</p>
         </div>
       );
     }
