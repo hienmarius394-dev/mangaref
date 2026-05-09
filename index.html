@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MangaRef v7</title>
+  <title>MangaRef v8</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -14,15 +14,65 @@
     textarea::placeholder { color: #9ca3af; }
     textarea:focus { outline: none; border-color: #e60023 !important; box-shadow: 0 0 0 3px #e6002318; }
     button:active { transform: scale(0.98); }
+
+    /* Animation chargement */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .dot1 { animation: bounce 1s ease-in-out infinite 0s; }
+    .dot2 { animation: bounce 1s ease-in-out infinite 0.2s; }
+    .dot3 { animation: bounce 1s ease-in-out infinite 0.4s; }
+
+    /* Historique hover */
+    .hist-item:hover { background: #fef2f2 !important; border-color: #e60023 !important; }
+
+    /* Exemples hover */
+    .exemple-chip:hover { background: #e60023 !important; color: #fff !important; }
+
+    /* Copier button */
+    .copy-btn:hover { background: #f3f4f6 !important; }
+
+    /* Masquer ⌘+Entrée sur mobile */
+    @media (max-width: 768px) {
+      .shortcut-hint { display: none !important; }
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
     const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
+
+    // ═══ COMPTEUR GLOBAL (localStorage) ═══
+    const getCount = () => {
+      try { return parseInt(localStorage.getItem("mangaref_count") || "0"); } catch { return 0; }
+    };
+    const incCount = () => {
+      try {
+        const n = getCount() + 1;
+        localStorage.setItem("mangaref_count", n);
+        return n;
+      } catch { return 0; }
+    };
+
+    // ═══ HISTORIQUE (localStorage) ═══
+    const getHistory = () => {
+      try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; }
+    };
+    const addToHistory = (scene) => {
+      try {
+        const h = getHistory().filter(s => s !== scene).slice(0, 4);
+        localStorage.setItem("mangaref_history", JSON.stringify([scene, ...h]));
+      } catch {}
+    };
 
     const SYSTEM = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
 
@@ -59,41 +109,106 @@ PINTEREST_DESSIN: drawing of character jumping off rooftop
 PINTEREST_REALISTE: person jumping rooftop edge action photo
 CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se détendent, les orteils quittent le bord en dernier. En chute libre, les vêtements et les cheveux montent vers le haut (contre-intuitif mais juste). Pour la vitesse, étire légèrement les proportions verticalement. Le regard vers le bas avec les yeux écarquillés raconte la hauteur mieux que n'importe quel décor.`;
 
+    const EXEMPLES = [
+      "Un mec qui reçoit un coup de poing",
+      "Une fille qui pleure sous la pluie",
+      "Deux persos dos à dos",
+      "Un personnage qui tombe à genoux",
+      "Une main qui attrape un poignet",
+      "Un mec appuyé contre un mur",
+    ];
+
+    // ═══ MESSAGES DE CHARGEMENT ═══
+    const LOADING_MSGS = [
+      "Le Sensei consulte ses grimoires...",
+      "Analyse de la scène en cours...",
+      "Recherche des meilleures références...",
+      "Le Sensei affûte son pinceau...",
+      "Exploration des archives visuelles...",
+    ];
+
+    function CopyButton({ text }) {
+      const [copied, setCopied] = useState(false);
+      const copy = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      };
+      return (
+        <button onClick={copy} className="copy-btn"
+          title="Copier la requête"
+          style={{
+            background: "none", border: "1.5px solid #e5e7eb",
+            borderRadius: 7, padding: "3px 8px",
+            fontSize: 10, fontWeight: 700, color: copied ? "#16a34a" : "#9ca3af",
+            cursor: "pointer", transition: "all 0.15s", flexShrink: 0,
+          }}>
+          {copied ? "✓ Copié" : "Copier"}
+        </button>
+      );
+    }
+
     function LinkCard({ href, emoji, label, color, query }) {
       const [hov, setHov] = useState(false);
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer"
-          onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-          style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "16px 18px",
-            background: hov ? `${color}08` : "#fff",
-            border: `2px solid ${hov ? color : "#e5e7eb"}`,
-            borderRadius: 14, textDecoration: "none",
-            transition: "all 0.15s", marginBottom: 10,
-          }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 11,
-            background: hov ? color : `${color}18`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, flexShrink: 0, transition: "background 0.15s",
-          }}>{emoji}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 3 }}>{label}</div>
-            <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {query}
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <a href={href} target="_blank" rel="noopener noreferrer"
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "16px 18px",
+              background: hov ? `${color}08` : "#fff",
+              border: `2px solid ${hov ? color : "#e5e7eb"}`,
+              borderRadius: 14, textDecoration: "none",
+              transition: "all 0.15s",
+            }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 11,
+              background: hov ? color : `${color}18`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20, flexShrink: 0, transition: "background 0.15s",
+            }}>{emoji}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 3 }}>{label}</div>
+              <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {query}
+              </div>
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <CopyButton text={query} />
+              <div style={{ fontSize: 16, color: hov ? color : "#d1d5db", flexShrink: 0, transition: "color 0.15s" }}>→</div>
+            </div>
+          </a>
+        </div>
+      );
+    }
+
+    function LoadingDots({ msg }) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "20px 0" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["dot1","dot2","dot3"].map(c => (
+              <div key={c} className={c} style={{
+                width: 8, height: 8, borderRadius: "50%", background: "#e60023",
+              }} />
+            ))}
           </div>
-          <div style={{ fontSize: 16, color: hov ? color : "#d1d5db", flexShrink: 0, transition: "color 0.15s" }}>→</div>
-        </a>
+          <p style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>{msg}</p>
+        </div>
       );
     }
 
     function MangaRef() {
-      const [scene, setScene]   = useState("");
+      const [scene, setScene]     = useState("");
       const [loading, setLoading] = useState(false);
-      const [result, setResult] = useState(null);
-      const [error, setError]   = useState(null);
+      const [result, setResult]   = useState(null);
+      const [error, setError]     = useState(null);
+      const [count, setCount]     = useState(getCount());
+      const [history, setHistory] = useState(getHistory());
+      const [loadMsg, setLoadMsg] = useState(LOADING_MSGS[0]);
 
       const parse = (text) => {
         const getLine = (label) => {
@@ -109,9 +224,11 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
         };
       };
 
-      const search = async () => {
-        if (!scene.trim() || loading) return;
+      const search = async (sceneText) => {
+        const q = (sceneText || scene).trim();
+        if (!q || loading) return;
         setLoading(true); setResult(null); setError(null);
+        setLoadMsg(LOADING_MSGS[Math.floor(Math.random() * LOADING_MSGS.length)]);
         try {
           const res = await fetch("/api/chat", {
             method: "POST",
@@ -120,24 +237,37 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
               model: "claude-sonnet-4-6",
               max_tokens: 300,
               system: SYSTEM,
-              messages: [{ role: "user", content: `Scène : "${scene}"` }]
+              messages: [{ role: "user", content: `Scène : "${q}"` }]
             })
           });
           const data = await res.json();
-          console.log("API response:", JSON.stringify(data)); // debug
           const text = data.content?.map(b => b.text || "").join("") || "";
           const parsed = parse(text);
           if (!parsed.dessin) {
             setError("Réessaie en décrivant mieux ta scène !");
           } else {
             setResult(parsed);
+            addToHistory(q);
+            setHistory(getHistory());
+            const newCount = incCount();
+            setCount(newCount);
           }
         } catch (err) {
-          console.error("Fetch error:", err);
           setError("Erreur de connexion, réessaie !");
         } finally {
           setLoading(false);
         }
+      };
+
+      const useExample = (ex) => {
+        setScene(ex);
+        setResult(null);
+        setError(null);
+      };
+
+      const useHistory = (h) => {
+        setScene(h);
+        search(h);
       };
 
       const active = scene.trim() && !loading;
@@ -148,14 +278,30 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
           display: "flex", flexDirection: "column", alignItems: "center",
           padding: "40px 16px 80px",
         }}>
+          {/* Header */}
           <div style={{ marginBottom: 4, display: "flex", alignItems: "baseline" }}>
             <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
             <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
           </div>
-          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 28, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: count > 0 ? 8 : 28, textAlign: "center" }}>
             Décris ta scène → trouve tes références Pinterest
           </p>
 
+          {/* Compteur */}
+          {count > 0 && (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "#fff", border: "1.5px solid #fecdd3",
+              borderRadius: 20, padding: "4px 12px", marginBottom: 22,
+            }}>
+              <span style={{ fontSize: 14 }}>🎨</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#e60023" }}>
+                {count} scène{count > 1 ? "s" : ""} analysée{count > 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+
+          {/* Carte principale */}
           <div style={{
             width: "100%", maxWidth: 480,
             background: "#fff", borderRadius: 16,
@@ -177,10 +323,11 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
                 resize: "none", color: "#111827", transition: "all 0.15s",
               }}
             />
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
+            <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
               <span style={{ fontSize: 11, color: "#d1d5db" }}>⌘ + Entrée pour lancer</span>
             </div>
-            <button onClick={search} disabled={!active}
+            <div style={{ marginBottom: 10, marginTop: 4 }}></div>
+            <button onClick={() => search()} disabled={!active}
               style={{
                 width: "100%", padding: "13px",
                 background: active ? "#e60023" : "#fecdd3",
@@ -193,6 +340,52 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             </button>
           </div>
 
+          {/* Exemples de scènes */}
+          {!result && !loading && (
+            <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                Exemples de scènes
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {EXEMPLES.map(ex => (
+                  <button key={ex} onClick={() => useExample(ex)} className="exemple-chip"
+                    style={{
+                      background: "#fff", border: "1.5px solid #e5e7eb",
+                      borderRadius: 20, padding: "5px 12px",
+                      fontSize: 11, color: "#374151", cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}>
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Historique */}
+          {!result && !loading && history.length > 0 && (
+            <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                Recherches récentes
+              </p>
+              {history.map((h, i) => (
+                <button key={i} onClick={() => useHistory(h)} className="hist-item"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    width: "100%", background: "#fff",
+                    border: "1.5px solid #e5e7eb", borderRadius: 10,
+                    padding: "9px 13px", marginBottom: 6,
+                    fontSize: 12, color: "#374151", cursor: "pointer",
+                    textAlign: "left", transition: "all 0.15s",
+                  }}>
+                  <span style={{ color: "#d1d5db", fontSize: 13 }}>↺</span>
+                  {h}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Erreur */}
           {error && (
             <div style={{
               width: "100%", maxWidth: 480, padding: "13px 16px",
@@ -203,6 +396,14 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             </div>
           )}
 
+          {/* Animation chargement */}
+          {loading && (
+            <div style={{ width: "100%", maxWidth: 480 }}>
+              <LoadingDots msg={loadMsg} />
+            </div>
+          )}
+
+          {/* Résultats */}
           {result && !loading && (
             <div style={{ width: "100%", maxWidth: 480 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
@@ -250,7 +451,7 @@ CONSEIL: Montre la poussée des jambes au moment du saut — les genoux se déte
             </div>
           )}
 
-          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>MangaRef v7 — Pour les artistes 🎌</p>
+          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>MangaRef v8 — Pour les artistes 🎌</p>
         </div>
       );
     }
