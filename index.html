@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MangaRef v9</title>
+  <title>MangaRef — Find your drawing references</title>
+  <meta name="description" content="Describe your scene and instantly get optimized Pinterest queries for manga, webtoon and comic references. Free tool for artists." />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -45,10 +46,11 @@
         drawLabel: "Illustration / Dessin",
         realLabel: "Photo réaliste",
         senseiLabel: "Conseil du Sensei",
-        scenes: (n) => `${n} scène${n > 1 ? "s" : ""} analysée${n > 1 ? "s" : ""}`,
         errRetry: "Réessaie en décrivant mieux ta scène !",
         errConn: "Erreur de connexion, réessaie !",
-        footer: "MangaRef v9 — Pour les artistes 🎌",
+        footer: "MangaRef — Pour les artistes 🎌",
+        share: "Partage à un ami artiste →",
+        shareCopied: "Lien copié ✓",
       },
       en: {
         tagline: "Describe your scene → find your Pinterest references",
@@ -64,20 +66,47 @@
         drawLabel: "Illustration / Drawing",
         realLabel: "Realistic photo",
         senseiLabel: "Sensei's Tip",
-        scenes: (n) => `${n} scene${n > 1 ? "s" : ""} analyzed`,
         errRetry: "Try describing your scene more precisely!",
         errConn: "Connection error, please try again!",
-        footer: "MangaRef v9 — For artists 🎌",
+        footer: "MangaRef — For artists 🎌",
+        share: "Share with an artist friend →",
+        shareCopied: "Link copied ✓",
       },
     };
 
     const EXEMPLES_FR = ["Un mec qui reçoit un coup de poing","Une fille qui pleure sous la pluie","Deux persos dos à dos","Un personnage qui tombe à genoux","Une main qui attrape un poignet","Un mec appuyé contre un mur"];
     const EXEMPLES_EN = ["A guy getting punched in the face","A girl crying in the rain","Two characters standing back to back","A character falling to their knees","A hand grabbing a wrist","A guy leaning against a wall"];
-    const LOADING_MSGS_FR = ["Le Sensei consulte ses grimoires...","Analyse de la scène en cours...","Recherche des meilleures références...","Le Sensei affûte son pinceau...","Exploration des archives visuelles..."];
-    const LOADING_MSGS_EN = ["The Sensei consults the archives...","Analyzing your scene...","Searching for the best references...","The Sensei sharpens his brush...","Exploring the visual database..."];
+    const LOADING_MSGS_FR = [
+      "Le Sensei consulte ses grimoires...",
+      "Analyse de la scène en cours...",
+      "Recherche des meilleures références...",
+      "Le Sensei affûte son pinceau...",
+      "Exploration des archives visuelles...",
+      "Le Sensei médite sur ta scène...",
+      "Invocation des références sacrées...",
+      "Le Sensei n'est pas payé pour ça mais bon...",
+      "Scan de 10 000 planches manga...",
+      "Le Sensei approuve... ou pas. On verra.",
+      "Channeling l'énergie du dessin...",
+      "Le Sensei boit son thé et réfléchit...",
+    ];
+    const LOADING_MSGS_EN = [
+      "The Sensei consults the archives...",
+      "Analyzing your scene...",
+      "Searching for the best references...",
+      "The Sensei sharpens his brush...",
+      "Exploring the visual database...",
+      "The Sensei meditates on your scene...",
+      "Summoning the sacred references...",
+      "The Sensei didn't sign up for this but here we go...",
+      "Scanning 10,000 manga pages...",
+      "The Sensei approves... maybe. We'll see.",
+      "Channeling the drawing energy...",
+      "The Sensei is sipping tea and thinking...",
+    ];
 
-    const getCount = () => { try { return parseInt(localStorage.getItem("mangaref_count") || "0"); } catch { return 0; } };
-    const incCount = () => { try { const n = getCount() + 1; localStorage.setItem("mangaref_count", n); return n; } catch { return 0; } };
+    const getLang = () => { try { return localStorage.getItem("mangaref_lang") || "en"; } catch { return "en"; } };
+    const saveLang = (l) => { try { localStorage.setItem("mangaref_lang", l); } catch {} };
     const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
     const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
@@ -96,7 +125,7 @@ INTERDIT : détails de pose, d'expression, de vêtement dans la requête.
 ═══ FORMAT DE RÉPONSE (STRICTEMENT) ═══
 PINTEREST_DESSIN: [drawing manga of + MAX 5 mots]
 PINTEREST_REALISTE: [MAX 5 mots, sans drawing, sans manga]
-CONSEIL: [3-4 phrases en français, technique et précis]
+CONSEIL: [2 phrases maximum en français, technique et précis, va droit au but]
 
 ═══ EXEMPLES ═══
 
@@ -130,7 +159,7 @@ FORBIDDEN: pose details, expressions, clothing in the query.
 ═══ RESPONSE FORMAT (STRICT) ═══
 PINTEREST_DESSIN: [drawing manga of + MAX 5 words]
 PINTEREST_REALISTE: [MAX 5 words, no drawing, no manga]
-CONSEIL: [3-4 sentences in English, technical and precise]
+CONSEIL: [2 sentences maximum in English, technical and precise, straight to the point]
 
 ═══ EXAMPLES ═══
 
@@ -184,14 +213,28 @@ CONSEIL: Show the leg push at the moment of jump — knees extend, toes leave th
       );
     }
 
+    function ShareButton({ t }) {
+      const [copied, setCopied] = useState(false);
+      const share = () => {
+        navigator.clipboard?.writeText("https://mangaref.app").then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      };
+      return (
+        <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "#e60023" : "#9ca3af", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>
+          {copied ? t.shareCopied : t.share}
+        </button>
+      );
+    }
+
     function MangaRef() {
       const [scene, setScene] = useState("");
       const [loading, setLoading] = useState(false);
       const [result, setResult] = useState(null);
       const [error, setError] = useState(null);
-      const [count, setCount] = useState(getCount());
       const [history, setHistory] = useState(getHistory());
-      const [lang, setLang] = useState("fr");
+      const [lang, setLang] = useState(getLang());
       const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
 
       const t = T[lang];
@@ -216,7 +259,7 @@ CONSEIL: Show the leg push at the moment of jump — knees extend, toes leave th
           const text = data.content?.map(b => b.text || "").join("") || "";
           const parsed = parse(text);
           if (!parsed.dessin) { setError(t.errRetry); }
-          else { setResult(parsed); addToHistory(q); setHistory(getHistory()); setCount(incCount()); }
+          else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
         } catch { setError(t.errConn); }
         finally { setLoading(false); }
       };
@@ -227,23 +270,18 @@ CONSEIL: Show the leg push at the moment of jump — knees extend, toes leave th
         <div style={{ minHeight: "100vh", background: "#f3f4f6", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 16px 80px" }}>
 
           <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "baseline" }}>
+            <div onClick={() => { setResult(null); setScene(""); setError(null); window.scrollTo({top: 0, behavior: "smooth"}); }}
+              style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
               <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
               <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
             </div>
-            <button onClick={() => { setLang(l => l === "fr" ? "en" : "fr"); setResult(null); setScene(""); setError(null); }}
+            <button onClick={() => { const nl = lang === "fr" ? "en" : "fr"; setLang(nl); saveLang(nl); setResult(null); setScene(""); setError(null); }}
               style={{ background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 20, padding: "4px 10px", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
               {lang === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
             </button>
           </div>
 
-          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: count > 0 ? 8 : 28, textAlign: "center" }}>{t.tagline}</p>
-
-          {count > 0 && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1.5px solid #fecdd3", borderRadius: 20, padding: "4px 12px", marginBottom: 22 }}>
-              <span>🎨</span><span style={{ fontSize: 11, fontWeight: 700, color: "#e60023" }}>{t.scenes(count)}</span>
-            </div>
-          )}
+          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 28, textAlign: "center" }}>{t.tagline}</p>
 
           <div style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>{t.sceneLabel}</label>
@@ -303,7 +341,10 @@ CONSEIL: Show the leg push at the moment of jump — knees extend, toes leave th
             </div>
           )}
 
-          <p style={{ marginTop: 48, fontSize: 11, color: "#d1d5db" }}>{t.footer}</p>
+          <div style={{ marginTop: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <ShareButton t={t} />
+            <p style={{ fontSize: 11, color: "#d1d5db" }}>{t.footer}</p>
+          </div>
         </div>
       );
     }
