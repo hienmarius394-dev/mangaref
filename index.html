@@ -1,116 +1,272 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" id="html-root">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MangaRef — Find your drawing references</title>
   <meta name="description" content="Describe your scene and instantly get optimized Pinterest queries for manga, webtoon and comic references. Free tool for artists." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MangaRef" />
+  <meta name="theme-color" content="#e60023" id="theme-meta" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
   <style>
+    /* ── Thème clair ── */
+    :root {
+      --bg: #f3f4f6; --card: #fff; --border: #e5e7eb;
+      --txt: #111827; --txt2: #374151; --txt3: #6b7280; --txt4: #9ca3af;
+      --accent: #e60023; --accent2: #9f1239;
+      --chip-bg: #fff; --chip-border: #e5e7eb;
+      --hist-hover: #fef2f2; --inp-border: #e5e7eb;
+      --nav-bg: #fff; --nav-border: #f3f4f6;
+      --modal-bg: rgba(0,0,0,0.45);
+    }
+    /* ── Thème sombre ── */
+    .dark {
+      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
+      --txt: #f0f2ff; --txt2: #c8cce0; --txt3: #8890aa; --txt4: #555d75;
+      --accent: #ff2d44; --accent2: #e60023;
+      --chip-bg: #1e2130; --chip-border: #2a2d3a;
+      --hist-hover: #1f1520; --inp-border: #2a2d3a;
+      --nav-bg: #1a1d27; --nav-border: #2a2d3a;
+      --modal-bg: rgba(0,0,0,0.7);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    textarea { font-family: inherit; }
-    textarea::placeholder { color: #9ca3af; }
-    textarea:focus { outline: none; border-color: #e60023 !important; box-shadow: 0 0 0 3px #e6002318; }
+    html, body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: background .3s; }
+    textarea { font-family: inherit; background: var(--card); color: var(--txt); }
+    textarea::placeholder { color: var(--txt4); }
+    textarea:focus { outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 3px #e6002318; }
     button:active { transform: scale(0.98); }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
     .dot1 { animation: bounce 1s ease-in-out infinite 0s; }
     .dot2 { animation: bounce 1s ease-in-out infinite 0.2s; }
     .dot3 { animation: bounce 1s ease-in-out infinite 0.4s; }
-    .hist-item:hover { background: #fef2f2 !important; border-color: #e60023 !important; }
-    .exemple-chip:hover { background: #e60023 !important; color: #fff !important; }
-    .copy-btn:hover { background: #f3f4f6 !important; }
+    .hist-item:hover { background: var(--hist-hover) !important; border-color: var(--accent) !important; }
+    .exemple-chip:hover { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+    .copy-btn:hover { background: var(--border) !important; }
     @media (max-width: 768px) { .shortcut-hint { display: none !important; } }
+
+    /* Bannière install */
+    .install-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; z-index: 999;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      box-shadow: 0 2px 12px rgba(230,0,35,0.3);
+      animation: slideDown .3s ease;
+    }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+    .install-banner.off { display: none; }
+    .install-banner-left { display: flex; align-items: center; gap: 10px; }
+    .install-icon { width: 36px; height: 36px; border-radius: 9px; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: var(--accent); flex-shrink: 0; }
+    .install-txt { font-size: 12px; font-weight: 600; line-height: 1.4; }
+    .install-sub { font-size: 10px; opacity: .75; }
+    .install-btn { background: #fff; color: var(--accent); border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+    .install-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 18px; cursor: pointer; padding: 0 0 0 10px; line-height: 1; }
+
+    /* Modal paramètres */
+    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 800; display: flex; align-items: flex-end; justify-content: center; }
+    .modal-overlay.off { display: none; }
+    .modal-sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 20px 18px 40px; width: 100%; max-width: 480px; }
+    .modal-title { font-size: 15px; font-weight: 800; color: var(--txt); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--border); }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-lbl { font-size: 14px; font-weight: 600; color: var(--txt2); }
+    .setting-sub { font-size: 11px; color: var(--txt4); margin-top: 2px; }
+    .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
+    .toggle.on { background: var(--accent); }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .2s; }
+    .toggle.on::after { left: 23px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 20px; border-radius: 40px; font-size: 13px; font-weight: 700; z-index: 9000; opacity: 0; transition: opacity .3s; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+
+    /* Bouton paramètres flottant */
+    .settings-fab { position: fixed; bottom: 20px; right: 16px; width: 42px; height: 42px; border-radius: 50%; background: var(--card); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.1); z-index: 100; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState } = React;
-    const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
 
-    const T = {
-      fr: {
-        tagline: "Décris ta scène → trouve tes références Pinterest",
-        sceneLabel: "Ta scène",
-        placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
-        btnSearch: "📌 Trouver mes références",
-        btnLoading: "⏳ Recherche en cours...",
-        btnNew: "↺ Nouvelle recherche",
-        shortcut: "⌘ + Entrée pour lancer",
-        examplesTitle: "Exemples de scènes",
-        historyTitle: "Recherches récentes",
-        pinterestLabel: "Pinterest",
-        drawLabel: "Illustration / Dessin",
-        realLabel: "Photo réaliste",
-        senseiLabel: "Conseil du Sensei",
-        errRetry: "Réessaie en décrivant mieux ta scène !",
-        errConn: "Erreur de connexion, réessaie !",
-        footer: "MangaRef — Pour les artistes 🎌",
-        share: "Partage à un ami artiste →",
-        shareCopied: "Lien copié ✓",
-      },
-      en: {
-        tagline: "Describe your scene → find your Pinterest references",
-        sceneLabel: "Your scene",
-        placeholder: "Ex: A guy getting punched in the jaw...",
-        btnSearch: "📌 Find my references",
-        btnLoading: "⏳ Searching...",
-        btnNew: "↺ New search",
-        shortcut: "⌘ + Enter to search",
-        examplesTitle: "Scene examples",
-        historyTitle: "Recent searches",
-        pinterestLabel: "Pinterest",
-        drawLabel: "Illustration / Drawing",
-        realLabel: "Realistic photo",
-        senseiLabel: "Sensei's Tip",
-        errRetry: "Try describing your scene more precisely!",
-        errConn: "Connection error, please try again!",
-        footer: "MangaRef — For artists 🎌",
-        share: "Share with an artist friend →",
-        shareCopied: "Link copied ✓",
-      },
-    };
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
-    const EXEMPLES_FR = ["Un mec qui attrape l'autre par le col","Une main qui attrape un poignet","Un gars qui court à toute vitesse","Un mec qui serre une fille dans ses bras par derrière","Une fille avec un sourire diabolique","Deux persos qui se battent avec des épées"];
-    const EXEMPLES_EN = ["A guy grabbing another by the collar","A hand grabbing a wrist","A guy running at full sprint","A man hugging a woman from behind","A girl with a menacing evil smile","Two characters fighting with swords"];
-    const LOADING_MSGS_FR = [
-      "Le Sensei consulte ses grimoires...",
-      "Analyse de la scène en cours...",
-      "Recherche des meilleures références...",
-      "Le Sensei affûte son pinceau...",
-      "Exploration des archives visuelles...",
-      "Le Sensei médite sur ta scène...",
-      "Invocation des références sacrées...",
-      "Le Sensei n'est pas payé pour ça mais bon...",
-      "Scan de 10 000 planches manga...",
-      "Le Sensei approuve... ou pas. On verra.",
-      "Channeling l'énergie du dessin...",
-      "Le Sensei boit son thé et réfléchit...",
-    ];
-    const LOADING_MSGS_EN = [
-      "The Sensei consults the archives...",
-      "Analyzing your scene...",
-      "Searching for the best references...",
-      "The Sensei sharpens his brush...",
-      "Exploring the visual database...",
-      "The Sensei meditates on your scene...",
-      "Summoning the sacred references...",
-      "The Sensei didn't sign up for this but here we go...",
-      "Scanning 10,000 manga pages...",
-      "The Sensei approves... maybe. We'll see.",
-      "Channeling the drawing energy...",
-      "The Sensei is sipping tea and thinking...",
-    ];
+<!-- Bannière installation -->
+<div class="install-banner off" id="install-banner">
+  <div class="install-banner-left">
+    <div class="install-icon">MR</div>
+    <div>
+      <div class="install-txt">Installer MangaRef</div>
+      <div class="install-sub">Accès rapide depuis ton écran d'accueil</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:4px">
+    <button class="install-btn" id="install-btn">Installer</button>
+    <button class="install-close" id="install-close">×</button>
+  </div>
+</div>
 
-    const getLang = () => { try { return localStorage.getItem("mangaref_lang") || "en"; } catch { return "en"; } };
-    const saveLang = (l) => { try { localStorage.setItem("mangaref_lang", l); } catch {} };
-    const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
-    const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
+<!-- Modal Paramètres -->
+<div class="modal-overlay off" id="modal-overlay">
+  <div class="modal-sheet">
+    <p class="modal-title">⚙️ Paramètres</p>
+    <div class="setting-row">
+      <div><p class="setting-lbl">🌙 Thème sombre</p><p class="setting-sub">Moins fatiguant la nuit</p></div>
+      <button class="toggle" id="tog-dark" onclick="toggleDark()"></button>
+    </div>
+    <div class="setting-row">
+      <div><p class="setting-lbl">📲 Installer l'app</p><p class="setting-sub">Ajouter à l'écran d'accueil</p></div>
+      <button style="background:var(--accent);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer" onclick="triggerInstall()">Installer</button>
+    </div>
+  </div>
+</div>
 
-    const SYSTEM_FR = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
+<!-- Bouton paramètres -->
+<button class="settings-fab" onclick="openModal()" title="Paramètres">⚙️</button>
+
+<div id="root"></div>
+
+<script>
+// ── Dark mode ──────────────────────────────────────────────────────────
+function getDark(){try{return localStorage.getItem("mr_dark")==="1";}catch{return false;}}
+function applyDark(d){
+  document.getElementById("html-root").classList.toggle("dark",d);
+  document.getElementById("theme-meta").content=d?"#0f1117":"#e60023";
+}
+function toggleDark(){
+  var d=!getDark();
+  try{localStorage.setItem("mr_dark",d?"1":"0");}catch{}
+  applyDark(d);
+  document.getElementById("tog-dark").classList.toggle("on",d);
+}
+applyDark(getDark());
+
+// ── Modal ──────────────────────────────────────────────────────────────
+function openModal(){
+  document.getElementById("modal-overlay").classList.remove("off");
+  document.getElementById("tog-dark").classList.toggle("on",getDark());
+}
+document.addEventListener("DOMContentLoaded",function(){
+  document.getElementById("modal-overlay").addEventListener("click",function(e){
+    if(e.target===document.getElementById("modal-overlay"))
+      document.getElementById("modal-overlay").classList.add("off");
+  });
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");},2500);
+}
+
+// ── PWA Install banner ─────────────────────────────────────────────────
+var deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",function(e){
+  e.preventDefault();deferredPrompt=e;
+  // N'affiche la bannière que si pas déjà installé/refusé
+  try{if(localStorage.getItem("mr_install_dismissed"))return;}catch{}
+  setTimeout(function(){
+    document.getElementById("install-banner").classList.remove("off");
+  },2000);
+});
+
+function triggerInstall(){
+  document.getElementById("modal-overlay").classList.add("off");
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(r){
+      if(r.outcome==="accepted"){showToast("🎌 MangaRef installé !");}
+      deferredPrompt=null;
+      document.getElementById("install-banner").classList.add("off");
+    });
+  }else{
+    showToast("💡 Menu Chrome ⋮ → Installer l'application");
+  }
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+  document.getElementById("install-btn").addEventListener("click",triggerInstall);
+  document.getElementById("install-close").addEventListener("click",function(){
+    document.getElementById("install-banner").classList.add("off");
+    try{localStorage.setItem("mr_install_dismissed","1");}catch{}
+  });
+});
+
+window.addEventListener("appinstalled",function(){
+  document.getElementById("install-banner").classList.add("off");
+  showToast("🎌 MangaRef installé !");
+});
+
+// ── Service Worker ─────────────────────────────────────────────────────
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/sw.js").catch(function(){});
+}
+</script>
+
+<script type="text/babel">
+  const { useState } = React;
+  const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
+
+  const T = {
+    fr: {
+      tagline: "Décris ta scène → trouve tes références Pinterest",
+      sceneLabel: "Ta scène",
+      placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
+      btnSearch: "📌 Trouver mes références",
+      btnLoading: "⏳ Recherche en cours...",
+      btnNew: "↺ Nouvelle recherche",
+      shortcut: "⌘ + Entrée pour lancer",
+      examplesTitle: "Exemples de scènes",
+      historyTitle: "Recherches récentes",
+      pinterestLabel: "Pinterest",
+      drawLabel: "Illustration / Dessin",
+      realLabel: "Photo réaliste",
+      senseiLabel: "Conseil du Sensei",
+      errRetry: "Réessaie en décrivant mieux ta scène !",
+      errConn: "Erreur de connexion, réessaie !",
+      footer: "MangaRef — Pour les artistes 🎌",
+      share: "Partage à un ami artiste →",
+      shareCopied: "Lien copié ✓",
+    },
+    en: {
+      tagline: "Describe your scene → find your Pinterest references",
+      sceneLabel: "Your scene",
+      placeholder: "Ex: A guy getting punched in the jaw...",
+      btnSearch: "📌 Find my references",
+      btnLoading: "⏳ Searching...",
+      btnNew: "↺ New search",
+      shortcut: "⌘ + Enter to search",
+      examplesTitle: "Scene examples",
+      historyTitle: "Recent searches",
+      pinterestLabel: "Pinterest",
+      drawLabel: "Illustration / Drawing",
+      realLabel: "Realistic photo",
+      senseiLabel: "Sensei's Tip",
+      errRetry: "Try describing your scene more precisely!",
+      errConn: "Connection error, please try again!",
+      footer: "MangaRef — For artists 🎌",
+      share: "Share with an artist friend →",
+      shareCopied: "Link copied ✓",
+    },
+  };
+
+  const EXEMPLES_FR = ["Un mec qui attrape l'autre par le col","Une main qui attrape un poignet","Un gars qui court à toute vitesse","Un mec qui serre une fille dans ses bras par derrière","Une fille avec un sourire diabolique","Deux persos qui se battent avec des épées"];
+  const EXEMPLES_EN = ["A guy grabbing another by the collar","A hand grabbing a wrist","A guy running at full sprint","A man hugging a woman from behind","A girl with a menacing evil smile","Two characters fighting with swords"];
+  const LOADING_MSGS_FR = ["Le Sensei consulte ses grimoires...","Analyse de la scène en cours...","Recherche des meilleures références...","Le Sensei affûte son pinceau...","Exploration des archives visuelles...","Le Sensei médite sur ta scène...","Invocation des références sacrées...","Le Sensei n'est pas payé pour ça mais bon...","Scan de 10 000 planches manga...","Le Sensei approuve... ou pas. On verra.","Channeling l'énergie du dessin...","Le Sensei boit son thé et réfléchit..."];
+  const LOADING_MSGS_EN = ["The Sensei consults the archives...","Analyzing your scene...","Searching for the best references...","The Sensei sharpens his brush...","Exploring the visual database...","The Sensei meditates on your scene...","Summoning the sacred references...","The Sensei didn't sign up for this but here we go...","Scanning 10,000 manga pages...","The Sensei approves... maybe. We'll see.","Channeling the drawing energy...","The Sensei is sipping tea and thinking..."];
+
+  const SYSTEM_FR = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
 
 Quand un artiste décrit une scène, tu génères 2 requêtes Pinterest + un conseil technique.
 
@@ -120,53 +276,32 @@ Quand un artiste décrit une scène, tu génères 2 requêtes Pinterest + un con
 
 RÈGLE VOCABULAIRE (CRITIQUE) :
 - TOUJOURS utiliser "man" ou "woman". JAMAIS "person", "character", "figure", "someone".
-  Raison : "person" → résultats génériques. "man"/"woman" → scènes narratives précises.
-- TOUJOURS commencer par "drawing manga of" (filtre Pinterest le plus puissant).
+- TOUJOURS commencer par "drawing manga of".
 
 RÈGLE SCÈNE À 2 PERSONNAGES :
-- Toujours ajouter "two characters" dans la requête pour ancrer la scène.
+- Toujours ajouter "two characters" dans la requête.
 - Décrire la SCÈNE GLOBALE, pas les actions séparées.
-- Ex : "collar grab two characters" et NON "man lifts man by collar".
 
-MOTS BANNIS (produisent de mauvais résultats) :
-- "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style"
-- "webtoon" → ramène des covers coréennes commerciales
-- "lift" → attire throat grab au lieu de collar grab
-- "block" → ramène du sport de combat
-- "person", "character", "figure", "someone"
+MOTS BANNIS : "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style", "webtoon", "lift", "block", "person", "character", "figure", "someone"
 INTERDIT : détails de pose, d'expression, de vêtement dans la requête.
 
 ═══ FORMAT DE RÉPONSE (STRICTEMENT) ═══
 PINTEREST_DESSIN: [drawing manga of + MAX 5 mots]
 PINTEREST_REALISTE: [MAX 5 mots, sans drawing, sans manga]
-CONSEIL: [2 phrases maximum en français, technique et précis, va droit au but]
-
-═══ REQUÊTES VALIDÉES PAR TESTS RÉELS ═══
-✅ drawing manga of collar grab two characters
-✅ drawing manga of wrist grab held
-✅ drawing manga of hand catch incoming fist
-✅ drawing manga of kabedon pose reference
-✅ drawing manga of man embrace hug from behind
-✅ drawing manga of man full sprint running pose
+CONSEIL: [2 phrases maximum en français, technique et précis]
 
 ═══ EXEMPLES ═══
-
 Scène : "un mec qui se prend un direct dans la mâchoire"
 PINTEREST_DESSIN: drawing manga of man punch jaw impact
 PINTEREST_REALISTE: man hit face jaw punch slow motion
-CONSEIL: Le moment du contact et la réaction sont deux dessins différents — choisis lequel tu veux montrer. Si c'est l'impact : la peau et la chair se déforment du côté du poing, les lèvres se retroussent. Si c'est la réaction : la tête part en rotation, l'épaule suit, le corps pivote.
-
-Scène : "un personnage qui dort sur une chaise"
-PINTEREST_DESSIN: drawing manga of man sleeping chair
-PINTEREST_REALISTE: man asleep chair photo
-CONSEIL: La chaise dicte la pose — selon qu'elle a des accoudoirs ou non, le corps s'y abandonne différemment. Sans accoudoir, les bras tombent librement et la tête part sur le côté ou en arrière.
+CONSEIL: Le moment du contact et la réaction sont deux dessins différents — choisis lequel tu veux montrer. Si c'est l'impact : la peau et la chair se déforment du côté du poing, les lèvres se retroussent.
 
 Scène : "un mec qui attrape le poignet d'une fille"
 PINTEREST_DESSIN: drawing manga of wrist grab two characters
 PINTEREST_REALISTE: wrist grab held two people
 CONSEIL: La main qui saisit se referme depuis l'extérieur du poignet — le pouce côté paume. La tension narrative vient du contraste entre la main crispée du saisisseur et le bras figé de celui qui subit.`;
 
-    const SYSTEM_EN = `You are MangaRef, an expert assistant helping artists (manga, webtoon, comics, fanart) find ultra-precise visual references.
+  const SYSTEM_EN = `You are MangaRef, an expert assistant helping artists (manga, webtoon, comics, fanart) find ultra-precise visual references.
 
 When an artist describes a scene, generate 2 Pinterest queries + a technical tip.
 
@@ -176,225 +311,210 @@ When an artist describes a scene, generate 2 Pinterest queries + a technical tip
 
 VOCABULARY RULE (CRITICAL):
 - ALWAYS use "man" or "woman". NEVER "person", "character", "figure", "someone".
-  Reason: "person" → generic results. "man"/"woman" → precise narrative scenes.
-- ALWAYS start with "drawing manga of" (strongest Pinterest filter).
+- ALWAYS start with "drawing manga of".
 
 2-CHARACTER SCENE RULE:
-- Always add "two characters" in the query to anchor the scene.
+- Always add "two characters" in the query.
 - Describe the GLOBAL SCENE, not separate actions.
-- Ex: "collar grab two characters" NOT "man lifts man by collar".
 
-BANNED WORDS (produce bad results):
-- "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style"
-- "webtoon" → returns commercial Korean covers
-- "lift" → attracts throat grab instead of collar grab
-- "block" → returns combat sports content
-- "person", "character", "figure", "someone"
+BANNED WORDS: "MMA", "boxing", "martial arts", "comic panel", "manga style", "anime style", "webtoon", "lift", "block", "person", "character", "figure", "someone"
 FORBIDDEN: pose details, expressions, clothing in the query.
 
 ═══ RESPONSE FORMAT (STRICT) ═══
 PINTEREST_DESSIN: [drawing manga of + MAX 5 words]
 PINTEREST_REALISTE: [MAX 5 words, no drawing, no manga]
-CONSEIL: [2 sentences maximum in English, technical and precise, straight to the point]
-
-═══ QUERIES VALIDATED BY REAL TESTS ═══
-✅ drawing manga of collar grab two characters
-✅ drawing manga of wrist grab held
-✅ drawing manga of hand catch incoming fist
-✅ drawing manga of kabedon pose reference
-✅ drawing manga of man embrace hug from behind
-✅ drawing manga of man full sprint running pose
+CONSEIL: [2 sentences maximum in English, technical and precise]
 
 ═══ EXAMPLES ═══
-
 Scene: "a guy getting punched in the jaw"
 PINTEREST_DESSIN: drawing manga of man punch jaw impact
 PINTEREST_REALISTE: man hit face jaw punch slow motion
-CONSEIL: The moment of contact and the reaction are two different drawings — choose which one you want to show. For impact: flesh deforms toward the fist, lips curl back. For reaction: head rotates, shoulder follows, body pivots.
-
-Scene: "a character sleeping on a chair"
-PINTEREST_DESSIN: drawing manga of man sleeping chair
-PINTEREST_REALISTE: man asleep chair photo
-CONSEIL: The chair dictates the pose — armrests or not completely changes how the body surrenders to it. Without armrests, arms fall freely and the head drops to the side or back.
+CONSEIL: The moment of contact and the reaction are two different drawings — choose which one you want to show. For impact: flesh deforms toward the fist, lips curl back.
 
 Scene: "a guy grabbing a girl's wrist"
 PINTEREST_DESSIN: drawing manga of wrist grab two characters
 PINTEREST_REALISTE: wrist grab held two people
 CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm side. The narrative tension comes from the contrast between the tense gripping hand and the frozen arm of the one being held.`;
 
-    function CopyButton({ text }) {
-      const [copied, setCopied] = useState(false);
-      const copy = (e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); };
-      return <button onClick={copy} className="copy-btn" style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 7, padding: "3px 8px", fontSize: 10, fontWeight: 700, color: copied ? "#16a34a" : "#9ca3af", cursor: "pointer", transition: "all 0.15s", flexShrink: 0 }}>{copied ? "✓ Copié" : "Copier"}</button>;
-    }
+  const getLang = () => { try { return localStorage.getItem("mangaref_lang") || "en"; } catch { return "en"; } };
+  const saveLang = (l) => { try { localStorage.setItem("mangaref_lang", l); } catch {} };
+  const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
+  const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
-    function LinkCard({ href, emoji, label, color, query }) {
-      const [hov, setHov] = useState(false);
-      return (
-        <div style={{ marginBottom: 10 }}>
-          <a href={href} target="_blank" rel="noopener noreferrer" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: hov ? `${color}08` : "#fff", border: `2px solid ${hov ? color : "#e5e7eb"}`, borderRadius: 14, textDecoration: "none", transition: "all 0.15s" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 11, background: hov ? color : `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, transition: "background 0.15s" }}>{emoji}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 3 }}>{label}</div>
-              <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{query}</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <CopyButton text={query} />
-              <div style={{ fontSize: 16, color: hov ? color : "#d1d5db", transition: "color 0.15s" }}>→</div>
-            </div>
-          </a>
-        </div>
-      );
-    }
+  function CopyButton({ text }) {
+    const [copied, setCopied] = useState(false);
+    const copy = (e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); };
+    return <button onClick={copy} className="copy-btn" style={{ background: "none", border: "1.5px solid var(--border)", borderRadius: 7, padding: "3px 8px", fontSize: 10, fontWeight: 700, color: copied ? "#16a34a" : "var(--txt4)", cursor: "pointer", transition: "all 0.15s", flexShrink: 0 }}>{copied ? "✓ Copié" : "Copier"}</button>;
+  }
 
-    function LoadingDots({ msg }) {
-      return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "20px 0" }}>
-          <div style={{ display: "flex", gap: 6 }}>{["dot1","dot2","dot3"].map(c => <div key={c} className={c} style={{ width: 8, height: 8, borderRadius: "50%", background: "#e60023" }} />)}</div>
-          <p style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>{msg}</p>
-        </div>
-      );
-    }
-
-    function ShareButton({ t }) {
-      const [copied, setCopied] = useState(false);
-      const share = () => {
-        navigator.clipboard?.writeText("https://mangaref.app").then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        });
-      };
-      return (
-        <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "#e60023" : "#9ca3af", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>
-          {copied ? t.shareCopied : t.share}
-        </button>
-      );
-    }
-
-    function MangaRef() {
-      const [scene, setScene] = useState("");
-      const [loading, setLoading] = useState(false);
-      const [result, setResult] = useState(null);
-      const [error, setError] = useState(null);
-      const [history, setHistory] = useState(getHistory());
-      const [lang, setLang] = useState(getLang());
-      const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
-
-      const t = T[lang];
-      const EXEMPLES = lang === "fr" ? EXEMPLES_FR : EXEMPLES_EN;
-      const LOAD_MSGS = lang === "fr" ? LOADING_MSGS_FR : LOADING_MSGS_EN;
-      const SYSTEM = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
-
-      const parse = (text) => {
-        const getLine = (label) => { const m = text.match(new RegExp(`${label}:\\s*([^\\n]+)`, "i")); return m ? m[1].trim() : ""; };
-        const cm = text.match(/CONSEIL:\s*([\s\S]+)/i);
-        return { dessin: getLine("PINTEREST_DESSIN"), realiste: getLine("PINTEREST_REALISTE"), conseil: cm ? cm[1].trim() : "" };
-      };
-
-      const search = async (sceneText) => {
-        const q = (sceneText || scene).trim();
-        if (!q || loading) return;
-        setLoading(true); setResult(null); setError(null);
-        setLoadMsg(LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)]);
-        try {
-          const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 300, system: SYSTEM, messages: [{ role: "user", content: `Scène : "${q}"` }] }) });
-          const data = await res.json();
-          const text = data.content?.map(b => b.text || "").join("") || "";
-          const parsed = parse(text);
-          if (!parsed.dessin) { setError(t.errRetry); }
-          else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
-        } catch { setError(t.errConn); }
-        finally { setLoading(false); }
-      };
-
-      const active = scene.trim() && !loading;
-
-      return (
-        <div style={{ minHeight: "100vh", background: "#f3f4f6", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 16px 80px" }}>
-
-          <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
-            <div onClick={() => { setResult(null); setScene(""); setError(null); window.scrollTo({top: 0, behavior: "smooth"}); }}
-              style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: "#e60023", letterSpacing: -1 }}>Manga</span>
-              <span style={{ fontSize: 30, fontWeight: 900, color: "#111827", letterSpacing: -1 }}>Ref</span>
-            </div>
-            <button onClick={() => { const nl = lang === "fr" ? "en" : "fr"; setLang(nl); saveLang(nl); setResult(null); setScene(""); setError(null); }}
-              style={{ background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 20, padding: "4px 10px", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
-              {lang === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
-            </button>
+  function LinkCard({ href, emoji, label, color, query }) {
+    const [hov, setHov] = useState(false);
+    return (
+      <div style={{ marginBottom: 10 }}>
+        <a href={href} target="_blank" rel="noopener noreferrer" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+          style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: hov ? `${color}12` : "var(--card)", border: `2px solid ${hov ? color : "var(--border)"}`, borderRadius: 14, textDecoration: "none", transition: "all 0.15s" }}>
+          <div style={{ width: 44, height: 44, borderRadius: 11, background: hov ? color : `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, transition: "background 0.15s" }}>{emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--txt)", marginBottom: 3 }}>{label}</div>
+            <div style={{ fontSize: 11, color: "var(--txt4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{query}</div>
           </div>
-
-          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 28, textAlign: "center" }}>{t.tagline}</p>
-
-          <div style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>{t.sceneLabel}</label>
-            <textarea value={scene} onChange={e => setScene(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && search()} placeholder={t.placeholder} rows={3}
-              style={{ width: "100%", border: "2px solid #e5e7eb", borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "#111827", transition: "all 0.15s" }} />
-            <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: "#d1d5db" }}>{t.shortcut}</span>
-            </div>
-            <div style={{ marginBottom: 10 }}></div>
-            <button onClick={() => search()} disabled={!active}
-              style={{ width: "100%", padding: "13px", background: active ? "#e60023" : "#fecdd3", color: active ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: active ? "pointer" : "default", transition: "all 0.15s" }}>
-              {loading ? t.btnLoading : t.btnSearch}
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <CopyButton text={query} />
+            <div style={{ fontSize: 16, color: hov ? color : "var(--border)", transition: "color 0.15s" }}>→</div>
           </div>
+        </a>
+      </div>
+    );
+  }
 
-          {!result && !loading && (
-            <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.examplesTitle}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {EXEMPLES.map(ex => <button key={ex} onClick={() => { setScene(ex); setResult(null); setError(null); }} className="exemple-chip" style={{ background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "#374151", cursor: "pointer", transition: "all 0.15s" }}>{ex}</button>)}
-              </div>
+  function LoadingDots({ msg }) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "20px 0" }}>
+        <div style={{ display: "flex", gap: 6 }}>{["dot1","dot2","dot3"].map(c => <div key={c} className={c} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }} />)}</div>
+        <p style={{ fontSize: 13, color: "var(--txt3)", fontStyle: "italic" }}>{msg}</p>
+      </div>
+    );
+  }
+
+  function ShareButton({ t }) {
+    const [copied, setCopied] = useState(false);
+    const share = () => {
+      navigator.clipboard?.writeText(window.location.origin).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    };
+    return (
+      <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "var(--accent)" : "var(--txt4)", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>
+        {copied ? t.shareCopied : t.share}
+      </button>
+    );
+  }
+
+  function MangaRef() {
+    const [scene, setScene] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
+    const [history, setHistory] = useState(getHistory());
+    const [lang, setLang] = useState(getLang());
+    const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
+
+    const t = T[lang];
+    const EXEMPLES = lang === "fr" ? EXEMPLES_FR : EXEMPLES_EN;
+    const LOAD_MSGS = lang === "fr" ? LOADING_MSGS_FR : LOADING_MSGS_EN;
+    const SYSTEM = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
+
+    const parse = (text) => {
+      const getLine = (label) => { const m = text.match(new RegExp(`${label}:\\s*([^\\n]+)`, "i")); return m ? m[1].trim() : ""; };
+      const cm = text.match(/CONSEIL:\s*([\s\S]+)/i);
+      return { dessin: getLine("PINTEREST_DESSIN"), realiste: getLine("PINTEREST_REALISTE"), conseil: cm ? cm[1].trim() : "" };
+    };
+
+    const search = async (sceneText) => {
+      const q = (sceneText || scene).trim();
+      if (!q || loading) return;
+      setLoading(true); setResult(null); setError(null);
+      setLoadMsg(LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)]);
+      try {
+        const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 300, system: SYSTEM, messages: [{ role: "user", content: `Scène : "${q}"` }] }) });
+        const data = await res.json();
+        const text = data.content?.map(b => b.text || "").join("") || "";
+        const parsed = parse(text);
+        if (!parsed.dessin) { setError(t.errRetry); }
+        else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
+      } catch { setError(t.errConn); }
+      finally { setLoading(false); }
+    };
+
+    const active = scene.trim() && !loading;
+    const topPad = 56; // espace pour la bannière install si visible
+
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", padding: `${topPad}px 16px 100px` }}>
+
+        <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
+          <div onClick={() => { setResult(null); setScene(""); setError(null); window.scrollTo({top: 0, behavior: "smooth"}); }}
+            style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
+            <span style={{ fontSize: 30, fontWeight: 900, color: "var(--accent)", letterSpacing: -1 }}>Manga</span>
+            <span style={{ fontSize: 30, fontWeight: 900, color: "var(--txt)", letterSpacing: -1 }}>Ref</span>
+          </div>
+          <button onClick={() => { const nl = lang === "fr" ? "en" : "fr"; setLang(nl); saveLang(nl); setResult(null); setScene(""); setError(null); }}
+            style={{ background: "var(--card)", border: "1.5px solid var(--border)", borderRadius: 20, padding: "4px 10px", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "var(--txt2)", display: "flex", alignItems: "center", gap: 5 }}>
+            {lang === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
+          </button>
+        </div>
+
+        <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 28, textAlign: "center" }}>{t.tagline}</p>
+
+        <div style={{ width: "100%", maxWidth: 480, background: "var(--card)", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>{t.sceneLabel}</label>
+          <textarea value={scene} onChange={e => setScene(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && search()} placeholder={t.placeholder} rows={3}
+            style={{ width: "100%", border: `2px solid var(--inp-border)`, borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "var(--txt)", background: "var(--bg)", transition: "all 0.15s" }} />
+          <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
+            <span style={{ fontSize: 11, color: "var(--txt4)" }}>{t.shortcut}</span>
+          </div>
+          <div style={{ marginBottom: 10 }}></div>
+          <button onClick={() => search()} disabled={!active}
+            style={{ width: "100%", padding: "13px", background: active ? "var(--accent)" : "#fecdd3", color: active ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: active ? "pointer" : "default", transition: "all 0.15s" }}>
+            {loading ? t.btnLoading : t.btnSearch}
+          </button>
+        </div>
+
+        {!result && !loading && (
+          <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.examplesTitle}</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {EXEMPLES.map(ex => <button key={ex} onClick={() => { setScene(ex); setResult(null); setError(null); }} className="exemple-chip" style={{ background: "var(--chip-bg)", border: `1.5px solid var(--chip-border)`, borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "var(--txt2)", cursor: "pointer", transition: "all 0.15s" }}>{ex}</button>)}
             </div>
-          )}
+          </div>
+        )}
 
-          {!result && !loading && history.length > 0 && (
-            <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.historyTitle}</p>
-              {history.map((h, i) => <button key={i} onClick={() => { setScene(h); search(h); }} className="hist-item" style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "9px 13px", marginBottom: 6, fontSize: 12, color: "#374151", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}><span style={{ color: "#d1d5db" }}>↺</span>{h}</button>)}
+        {!result && !loading && history.length > 0 && (
+          <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.historyTitle}</p>
+            {history.map((h, i) => <button key={i} onClick={() => { setScene(h); search(h); }} className="hist-item" style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "var(--card)", border: `1.5px solid var(--border)`, borderRadius: 10, padding: "9px 13px", marginBottom: 6, fontSize: 12, color: "var(--txt2)", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}><span style={{ color: "var(--txt4)" }}>↺</span>{h}</button>)}
+          </div>
+        )}
+
+        {error && <div style={{ width: "100%", maxWidth: 480, padding: "13px 16px", background: "var(--hist-hover)", border: "1.5px solid #fecaca", borderRadius: 10, marginBottom: 12 }}><p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p></div>}
+
+        {loading && <div style={{ width: "100%", maxWidth: 480 }}><LoadingDots msg={loadMsg} /></div>}
+
+        {result && !loading && (
+          <div style={{ width: "100%", maxWidth: 480 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1 }}>{t.pinterestLabel}</span>
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
-          )}
-
-          {error && <div style={{ width: "100%", maxWidth: 480, padding: "13px 16px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, marginBottom: 12 }}><p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p></div>}
-
-          {loading && <div style={{ width: "100%", maxWidth: 480 }}><LoadingDots msg={loadMsg} /></div>}
-
-          {result && !loading && (
-            <div style={{ width: "100%", maxWidth: 480 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1 }}>{t.pinterestLabel}</span>
-                <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-              </div>
-              {result.dessin && <LinkCard href={pinterestUrl(result.dessin)} emoji="🎨" label={t.drawLabel} color="#e60023" query={result.dessin} />}
-              {result.realiste && <LinkCard href={pinterestUrl(result.realiste)} emoji="📷" label={t.realLabel} color="#9f1239" query={result.realiste} />}
-              {result.conseil && (
-                <div style={{ background: "#fff", border: "1.5px solid #e5e7eb", borderLeft: "4px solid #e60023", borderRadius: 12, padding: "15px 17px", marginTop: 4 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
-                    <span style={{ fontSize: 15 }}>🎌</span>
-                    <span style={{ fontWeight: 700, fontSize: 11, color: "#374151", textTransform: "uppercase", letterSpacing: 0.8 }}>{t.senseiLabel}</span>
-                  </div>
-                  <p style={{ fontSize: 13.5, color: "#374151", lineHeight: 1.8 }}>{result.conseil}</p>
+            {result.dessin && <LinkCard href={pinterestUrl(result.dessin)} emoji="🎨" label={t.drawLabel} color="#e60023" query={result.dessin} />}
+            {result.realiste && <LinkCard href={pinterestUrl(result.realiste)} emoji="📷" label={t.realLabel} color="#9f1239" query={result.realiste} />}
+            {result.conseil && (
+              <div style={{ background: "var(--card)", border: `1.5px solid var(--border)`, borderLeft: "4px solid var(--accent)", borderRadius: 12, padding: "15px 17px", marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+                  <span style={{ fontSize: 15 }}>🎌</span>
+                  <span style={{ fontWeight: 700, fontSize: 11, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 0.8 }}>{t.senseiLabel}</span>
                 </div>
-              )}
-              <div style={{ textAlign: "center", marginTop: 22 }}>
-                <button onClick={() => { setResult(null); setScene(""); }} style={{ background: "none", border: "none", color: "#e60023", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{t.btnNew}</button>
+                <p style={{ fontSize: 13.5, color: "var(--txt2)", lineHeight: 1.8 }}>{result.conseil}</p>
               </div>
+            )}
+            <div style={{ textAlign: "center", marginTop: 22 }}>
+              <button onClick={() => { setResult(null); setScene(""); }} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{t.btnNew}</button>
             </div>
-          )}
-
-          <div style={{ marginTop: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <ShareButton t={t} />
-            <p style={{ fontSize: 11, color: "#d1d5db" }}>{t.footer}</p>
           </div>
-        </div>
-      );
-    }
+        )}
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<MangaRef />);
-  </script>
+        <div style={{ marginTop: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <ShareButton t={t} />
+          <p style={{ fontSize: 11, color: "var(--txt4)" }}>{t.footer}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<MangaRef />);
+</script>
 </body>
 </html>
