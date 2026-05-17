@@ -51,13 +51,7 @@
     @media(max-width:768px){.shortcut-hint{display:none!important}}
 
     /* Zone image */
-    .img-dropzone{
-      width:100%;border:2px dashed var(--img-zone-border);border-radius:12px;
-      background:var(--img-zone);cursor:pointer;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:7px;padding:18px;transition:all .2s;position:relative;
-      min-height:90px;
-    }
+    .img-dropzone{width:100%;border:2px dashed var(--img-zone-border);border-radius:12px;background:var(--img-zone);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:18px;transition:all .2s;position:relative;min-height:90px;}
     .img-dropzone:hover,.img-dropzone.drag{border-color:var(--accent);background:#fef2f2}
     .dark .img-dropzone:hover,.dark .img-dropzone.drag{background:#2a1020}
     .img-dropzone-txt{font-size:12px;font-weight:600;color:var(--txt3);text-align:center}
@@ -65,16 +59,29 @@
     .img-preview-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;margin-top:4px}
     .img-preview{width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:var(--border);display:block}
     .img-remove{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:700}
-    /* Hint description discret */
-    .desc-required{
-      font-size:11px;color:var(--txt2);font-style:italic;
-      opacity:0.65;margin-top:4px;padding-left:2px;
-    }
+    .desc-required{font-size:11px;color:var(--txt2);font-style:italic;opacity:0.65;margin-top:4px;padding-left:2px;}
     .dark .desc-required{opacity:0.5}
 
-    /* Bannière install */
-    .install-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 2px 12px rgba(230,0,35,0.3);animation:slideDown .3s ease}
+    /* Bannière "ouvrir dans vrai navigateur" */
+    .browser-banner{
+      position:fixed;top:0;left:0;right:0;z-index:1000;
+      background:#1a1d27;color:#fff;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 14px;gap:10px;
+      box-shadow:0 2px 12px rgba(0,0,0,0.3);
+      animation:slideDown .3s ease;
+    }
+    .browser-banner.off{display:none}
     @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+    .browser-banner-left{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+    .browser-banner-icon{font-size:20px;flex-shrink:0}
+    .browser-banner-txt{font-size:11px;font-weight:600;line-height:1.4;color:#f0f2ff}
+    .browser-banner-sub{font-size:10px;opacity:.65;margin-top:1px}
+    .browser-banner-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap}
+    .browser-banner-close{background:none;border:none;color:rgba(255,255,255,0.5);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+
+    /* Bannière install PWA */
+    .install-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 2px 12px rgba(230,0,35,0.3);animation:slideDown .3s ease}
     .install-banner.off{display:none}
     .install-banner-left{display:flex;align-items:center;gap:10px}
     .install-icon{width:36px;height:36px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--accent);flex-shrink:0}
@@ -103,8 +110,6 @@
 
     /* FAB settings */
     .settings-fab{position:fixed;bottom:20px;right:16px;width:42px;height:42px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.1);z-index:100}
-
-    /* Badge image sur résultats */
     .search-btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
     .img-badge{background:rgba(255,255,255,0.25);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700}
   </style>
@@ -113,7 +118,20 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Bannière installation -->
+<!-- Bannière navigateur Instagram/Facebook -->
+<div class="browser-banner off" id="browser-banner">
+  <div class="browser-banner-left">
+    <div class="browser-banner-icon" id="browser-icon">🌐</div>
+    <div>
+      <div class="browser-banner-txt" id="browser-txt">Ouvre dans Chrome pour installer l'app</div>
+      <div class="browser-banner-sub" id="browser-sub">Le navigateur Instagram ne supporte pas l'installation</div>
+    </div>
+  </div>
+  <button class="browser-banner-btn" id="browser-btn" onclick="copyAndOpenBrowser()">Copier le lien</button>
+  <button class="browser-banner-close" id="browser-close">×</button>
+</div>
+
+<!-- Bannière installation PWA -->
 <div class="install-banner off" id="install-banner">
   <div class="install-banner-left">
     <div class="install-icon">MR</div>
@@ -143,12 +161,57 @@
   </div>
 </div>
 
-<!-- Bouton paramètres -->
 <button class="settings-fab" onclick="openModal()">⚙️</button>
-
 <div id="root"></div>
 
 <script>
+// ── Détection navigateur intégré (Instagram / Facebook / TikTok) ──────
+(function(){
+  var ua = navigator.userAgent || "";
+  var isInAppBrowser = /Instagram|FBAN|FBAV|FB_IAB|TikTok|BytedanceWebview/i.test(ua);
+  if (!isInAppBrowser) return;
+
+  try { if(localStorage.getItem("mr_browser_dismissed")) return; } catch{}
+
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var banner = document.getElementById("browser-banner");
+  var icon = document.getElementById("browser-icon");
+  var txt = document.getElementById("browser-txt");
+  var sub = document.getElementById("browser-sub");
+  var btn = document.getElementById("browser-btn");
+
+  if (isIOS) {
+    icon.textContent = "🧭";
+    txt.textContent = "Ouvre dans Safari pour installer l'app";
+    sub.textContent = "Appuie sur ··· puis \"Ouvrir dans Safari\"";
+    btn.textContent = "Copier le lien";
+  } else {
+    icon.textContent = "🌐";
+    txt.textContent = "Ouvre dans Chrome pour installer l'app";
+    sub.textContent = "Appuie sur ··· puis \"Ouvrir dans Chrome\"";
+    btn.textContent = "Copier le lien";
+  }
+
+  banner.classList.remove("off");
+
+  document.getElementById("browser-close").addEventListener("click", function(){
+    banner.classList.add("off");
+    try { localStorage.setItem("mr_browser_dismissed","1"); } catch{}
+  });
+})();
+
+function copyAndOpenBrowser(){
+  var url = window.location.href;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(function(){
+      showToast("🔗 Lien copié ! Colle-le dans Chrome ou Safari");
+    });
+  } else {
+    showToast("🔗 " + url);
+  }
+}
+
+// ── Dark mode ─────────────────────────────────────────────────────────
 function getDark(){try{return localStorage.getItem("mr_dark")==="1";}catch{return false;}}
 function applyDark(d){
   document.getElementById("html-root").classList.toggle("dark",d);
@@ -176,7 +239,7 @@ document.addEventListener("DOMContentLoaded",function(){
 function showToast(msg){
   var t=document.getElementById("toast");
   t.textContent=msg;t.classList.add("show");
-  setTimeout(function(){t.classList.remove("show");},2500);
+  setTimeout(function(){t.classList.remove("show");},3000);
 }
 window.showToast = showToast;
 
@@ -212,13 +275,12 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 </script>
 
 <script type="text/babel">
-  const { useState, useRef, useCallback } = React;
+  const { useState, useRef } = React;
   const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
 
   const T = {
     fr: {
       tagline: "Décris ta scène → trouve tes références Pinterest",
-      sceneLabel: "Ta scène",
       placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
       placeholderWithImg: "Ex : personnage accroupi qui se relève, lumière dramatique, style shonen...",
       btnSearch: "📌 Trouver mes références",
@@ -235,20 +297,17 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       errRetry: "Réessaie en décrivant mieux ta scène !",
       errConn: "Erreur de connexion, réessaie !",
       errImg: "Image trop lourde — essaie avec une image plus petite ou compresse-la d'abord.",
-      errDesc: "Ajoute une description pour aider le Sensei à comprendre ton croquis !",
       footer: "MangaRef — Pour les artistes 🎌",
       share: "Partage à un ami artiste →",
       shareCopied: "Lien copié ✓",
       imgZoneTxt: "📎 Ajouter un croquis ou une image",
       imgZoneSub: "JPG, PNG, WEBP — optionnel",
       imgRequired: "Croquis détecté ! Décris la scène pour que le Sensei cerne mieux la pose, l'ambiance ou le style recherché 🎯",
-      imgAnalysis: "🎨 Analyse du croquis en cours...",
     },
     en: {
       tagline: "Describe your scene → find your Pinterest references",
-      sceneLabel: "Your scene",
       placeholder: "Ex: A guy getting punched in the jaw...",
-      placeholderWithImg: "Describe what you're looking for in this sketch... (required)",
+      placeholderWithImg: "Describe what you're looking for in this sketch...",
       btnSearch: "📌 Find my references",
       btnSearchImg: "📌 Analyze my sketch",
       btnLoading: "⏳ Searching...",
@@ -263,14 +322,12 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       errRetry: "Try describing your scene more precisely!",
       errConn: "Connection error, please try again!",
       errImg: "Image too large — try a smaller image or compress it first.",
-      errDesc: "Add a description to help the Sensei understand your sketch!",
       footer: "MangaRef — For artists 🎌",
       share: "Share with an artist friend →",
       shareCopied: "Link copied ✓",
       imgZoneTxt: "📎 Add a sketch or image",
       imgZoneSub: "JPG, PNG, WEBP — optional",
       imgRequired: "Describe what you're looking for — the Sensei needs some context!",
-      imgAnalysis: "🎨 Analyzing your sketch...",
     },
   };
 
@@ -344,7 +401,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
-  // ── Compression image via canvas (max 800px, JPEG 70%) ─────────────
   const compressImage = (file) => new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -357,8 +413,7 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
       }
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error("Compression failed")); return; }
@@ -410,49 +465,28 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   function ShareButton({ t }) {
     const [copied, setCopied] = useState(false);
     const share = () => { navigator.clipboard?.writeText(window.location.origin).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); };
-    return (
-      <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "var(--accent)" : "var(--txt4)", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>
-        {copied ? t.shareCopied : t.share}
-      </button>
-    );
+    return <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "var(--accent)" : "var(--txt4)", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>{copied ? t.shareCopied : t.share}</button>;
   }
 
-  // ── Zone d'upload image ─────────────────────────────────────────────
   function ImageZone({ t, image, setImage, imagePreview, setImagePreview }) {
     const inputRef = useRef(null);
     const [drag, setDrag] = useState(false);
-
     const handleFile = (file) => {
       if (!file) return;
       if (!file.type.startsWith("image/")) { window.showToast("❌ Fichier non supporté"); return; }
-      // Limite client à 8 Mo (laisse de la marge avant compression)
       if (file.size > 8 * 1024 * 1024) { window.showToast("❌ Image trop lourde (max 8 Mo)"); return; }
       setImage(file);
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
+      setImagePreview(URL.createObjectURL(file));
     };
-
     const onDrop = (e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); };
-    const onDragOver = (e) => { e.preventDefault(); setDrag(true); };
-    const onDragLeave = () => setDrag(false);
-
-    if (imagePreview) {
-      return (
-        <div className="img-preview-wrap">
-          <img src={imagePreview} alt="preview" className="img-preview" />
-          <button className="img-remove" onClick={() => { setImage(null); setImagePreview(null); }}>×</button>
-        </div>
-      );
-    }
-
+    if (imagePreview) return (
+      <div className="img-preview-wrap">
+        <img src={imagePreview} alt="preview" className="img-preview" />
+        <button className="img-remove" onClick={() => { setImage(null); setImagePreview(null); }}>×</button>
+      </div>
+    );
     return (
-      <div
-        className={`img-dropzone${drag ? " drag" : ""}`}
-        onClick={() => inputRef.current?.click()}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-      >
+      <div className={`img-dropzone${drag ? " drag" : ""}`} onClick={() => inputRef.current?.click()} onDrop={onDrop} onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}>
         <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <p className="img-dropzone-txt">{t.imgZoneTxt}</p>
@@ -477,7 +511,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     const LOAD_MSGS = lang === "fr" ? LOADING_MSGS_FR : LOADING_MSGS_EN;
     const LOAD_MSGS_IMG = lang === "fr" ? LOADING_MSGS_IMG_FR : LOADING_MSGS_IMG_EN;
     const SYSTEM = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
-
     const hasImage = !!image;
     const canSearch = !loading && scene.trim().length > 0;
     const showDescRequired = hasImage && scene.trim().length === 0;
@@ -493,67 +526,32 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     const search = async (sceneText) => {
       const q = (sceneText || scene).trim();
       if (!q || loading) return;
-
       setLoading(true); setResult(null); setError(null);
-
       const msgs = hasImage ? LOAD_MSGS_IMG : LOAD_MSGS;
       setLoadMsg(msgs[Math.floor(Math.random() * msgs.length)]);
-
       try {
         let messages;
-
         if (hasImage) {
-          // Compression avant envoi
           let base64;
-          try {
-            base64 = await compressImage(image);
-          } catch {
-            setError(t.errImg);
-            setLoading(false);
-            return;
-          }
-
-          messages = [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-              { type: "text", text: `Scène : "${q}"\n\nAnalyse ce croquis et génère les requêtes Pinterest adaptées.` }
-            ]
-          }];
+          try { base64 = await compressImage(image); }
+          catch { setError(t.errImg); setLoading(false); return; }
+          messages = [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } }, { type: "text", text: `Scène : "${q}"\n\nAnalyse ce croquis et génère les requêtes Pinterest adaptées.` }] }];
         } else {
           messages = [{ role: "user", content: `Scène : "${q}"` }];
         }
-
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: SYSTEM, messages })
-        });
-
-        // Vérification explicite du statut HTTP
-        if (!res.ok) {
-          if (res.status === 413) { setError(t.errImg); }
-          else { setError(t.errConn); }
-          setLoading(false);
-          return;
-        }
-
+        const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: SYSTEM, messages }) });
+        if (!res.ok) { setError(res.status === 413 ? t.errImg : t.errConn); setLoading(false); return; }
         const data = await res.json();
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
         if (!parsed.dessin) { setError(t.errRetry); }
         else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
-      } catch {
-        setError(t.errConn);
-      } finally {
-        setLoading(false);
-      }
+      } catch { setError(t.errConn); }
+      finally { setLoading(false); }
     };
 
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", padding: "56px 16px 100px" }}>
-
-        {/* Header */}
         <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
           <div onClick={reset} style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
             <span style={{ fontSize: 30, fontWeight: 900, color: "var(--accent)", letterSpacing: -1 }}>Manga</span>
@@ -564,53 +562,30 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
             {lang === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
           </button>
         </div>
-
         <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 28, textAlign: "center" }}>{t.tagline}</p>
 
-        {/* Card principale */}
         <div style={{ width: "100%", maxWidth: 480, background: "var(--card)", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
-
-          {/* Zone image */}
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>
               🖼️ {lang === "fr" ? "Croquis / Référence" : "Sketch / Reference"} <span style={{ color: "var(--txt4)", fontWeight: 400, textTransform: "none" }}>— {lang === "fr" ? "optionnel" : "optional"}</span>
             </label>
             <ImageZone t={t} image={image} setImage={setImage} imagePreview={imagePreview} setImagePreview={setImagePreview} />
           </div>
-
-          {/* Hint discret si image uploadée */}
-          {hasImage && (
-            <div className="desc-required">{t.imgRequired}</div>
-          )}
-
-          {/* Textarea */}
+          {hasImage && <div className="desc-required">{t.imgRequired}</div>}
           <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", margin: "14px 0 8px", textTransform: "uppercase", letterSpacing: 0.6 }}>
             {lang === "fr" ? "Ta scène" : "Your scene"} {hasImage && <span style={{ color: "var(--accent)" }}>*</span>}
           </label>
-          <textarea
-            value={scene}
-            onChange={e => setScene(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSearch && search()}
-            placeholder={hasImage ? t.placeholderWithImg : t.placeholder}
-            rows={hasImage ? 2 : 3}
-            style={{ width: "100%", border: `2px solid ${showDescRequired ? "var(--accent)" : "var(--inp-border)"}`, borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "var(--txt)", background: "var(--bg)", transition: "all 0.15s" }}
-          />
-
+          <textarea value={scene} onChange={e => setScene(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSearch && search()} placeholder={hasImage ? t.placeholderWithImg : t.placeholder} rows={hasImage ? 2 : 3}
+            style={{ width: "100%", border: `2px solid ${showDescRequired ? "var(--accent)" : "var(--inp-border)"}`, borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "var(--txt)", background: "var(--bg)", transition: "all 0.15s" }} />
           <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
             <span style={{ fontSize: 11, color: "var(--txt4)" }}>{t.shortcut}</span>
           </div>
-
-          {/* Bouton recherche */}
-          <button
-            onClick={() => search()}
-            disabled={!canSearch}
-            style={{ width: "100%", padding: "13px", background: canSearch ? "var(--accent)" : "#fecdd3", color: canSearch ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: canSearch ? "pointer" : "default", transition: "all 0.15s" }}
-          >
+          <button onClick={() => search()} disabled={!canSearch}
+            style={{ width: "100%", padding: "13px", background: canSearch ? "var(--accent)" : "#fecdd3", color: canSearch ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: canSearch ? "pointer" : "default", transition: "all 0.15s" }}>
             {loading ? t.btnLoading : hasImage ? t.btnSearchImg : t.btnSearch}
           </button>
         </div>
 
-        {/* Exemples */}
         {!result && !loading && !hasImage && (
           <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.examplesTitle}</p>
@@ -620,7 +595,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           </div>
         )}
 
-        {/* Historique */}
         {!result && !loading && history.length > 0 && (
           <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.historyTitle}</p>
@@ -631,7 +605,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         {error && <div style={{ width: "100%", maxWidth: 480, padding: "13px 16px", background: "var(--hist-hover)", border: "1.5px solid #fecaca", borderRadius: 10, marginBottom: 12 }}><p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p></div>}
         {loading && <div style={{ width: "100%", maxWidth: 480 }}><LoadingDots msg={loadMsg} /></div>}
 
-        {/* Résultats */}
         {result && !loading && (
           <div style={{ width: "100%", maxWidth: 480 }}>
             {hasImage && (
