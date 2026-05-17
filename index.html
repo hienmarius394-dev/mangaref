@@ -65,14 +65,12 @@
     .img-preview-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;margin-top:4px}
     .img-preview{width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:var(--border);display:block}
     .img-remove{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:700}
-    /* Alerte description obligatoire */
+    /* Hint description discret */
     .desc-required{
-      display:flex;align-items:center;gap:7px;
-      background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;
-      padding:9px 12px;font-size:12px;color:#92400e;font-weight:600;
-      margin-top:8px;
+      font-size:11px;color:var(--txt2);font-style:italic;
+      opacity:0.65;margin-top:4px;padding-left:2px;
     }
-    .dark .desc-required{background:#2a1f00;border-color:#78450a;color:#fbbf24}
+    .dark .desc-required{opacity:0.5}
 
     /* Bannière install */
     .install-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 2px 12px rgba(230,0,35,0.3);animation:slideDown .3s ease}
@@ -221,7 +219,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       tagline: "Décris ta scène → trouve tes références Pinterest",
       sceneLabel: "Ta scène",
       placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
-      placeholderWithImg: "Décris ce que tu veux trouver comme réf pour ce croquis... (obligatoire)",
+      placeholderWithImg: "Ex : personnage accroupi qui se relève, lumière dramatique, style shonen...",
       btnSearch: "📌 Trouver mes références",
       btnSearchImg: "📌 Analyser mon croquis",
       btnLoading: "⏳ Recherche en cours...",
@@ -241,7 +239,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       shareCopied: "Lien copié ✓",
       imgZoneTxt: "📎 Ajouter un croquis ou une image",
       imgZoneSub: "JPG, PNG, WEBP — optionnel",
-      imgRequired: "Décris ce que tu cherches pour ce croquis — le Sensei a besoin d'un contexte !",
+      imgRequired: "Croquis détecté ! Décris la scène pour que le Sensei cerne mieux la pose, l'ambiance ou le style recherché 🎯",
       imgAnalysis: "🎨 Analyse du croquis en cours...",
     },
     en: {
@@ -542,11 +540,8 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           </div>
 
           {/* Alerte description obligatoire si image uploadée */}
-          {showDescRequired && (
-            <div className="desc-required">
-              <span>⚠️</span>
-              <span>{t.imgRequired}</span>
-            </div>
+          {hasImage && (
+            <div className="desc-required">{t.imgRequired}</div>
           )}
 
           {/* Textarea description */}
