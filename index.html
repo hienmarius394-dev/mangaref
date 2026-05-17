@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MangaRef — Find your drawing references</title>
   <meta name="description" content="Describe your scene and instantly get optimized Pinterest queries for manga, webtoon and comic references. Free tool for artists." />
-
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -14,91 +13,106 @@
   <meta name="apple-mobile-web-app-title" content="MangaRef" />
   <meta name="theme-color" content="#e60023" id="theme-meta" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-
   <style>
-    /* ── Thème clair ── */
     :root {
-      --bg: #f3f4f6; --card: #fff; --border: #e5e7eb;
-      --txt: #111827; --txt2: #374151; --txt3: #6b7280; --txt4: #9ca3af;
-      --accent: #e60023; --accent2: #9f1239;
-      --chip-bg: #fff; --chip-border: #e5e7eb;
-      --hist-hover: #fef2f2; --inp-border: #e5e7eb;
-      --nav-bg: #fff; --nav-border: #f3f4f6;
-      --modal-bg: rgba(0,0,0,0.45);
+      --bg:#f3f4f6;--card:#fff;--border:#e5e7eb;
+      --txt:#111827;--txt2:#374151;--txt3:#6b7280;--txt4:#9ca3af;
+      --accent:#e60023;--accent2:#9f1239;
+      --chip-bg:#fff;--chip-border:#e5e7eb;
+      --hist-hover:#fef2f2;--inp-border:#e5e7eb;
+      --modal-bg:rgba(0,0,0,0.45);
+      --img-zone:#fff5f5;--img-zone-border:#fecaca;
     }
-    /* ── Thème sombre ── */
     .dark {
-      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
-      --txt: #f0f2ff; --txt2: #c8cce0; --txt3: #8890aa; --txt4: #555d75;
-      --accent: #ff2d44; --accent2: #e60023;
-      --chip-bg: #1e2130; --chip-border: #2a2d3a;
-      --hist-hover: #1f1520; --inp-border: #2a2d3a;
-      --nav-bg: #1a1d27; --nav-border: #2a2d3a;
-      --modal-bg: rgba(0,0,0,0.7);
+      --bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;
+      --txt:#f0f2ff;--txt2:#c8cce0;--txt3:#8890aa;--txt4:#555d75;
+      --accent:#ff2d44;--accent2:#e60023;
+      --chip-bg:#1e2130;--chip-border:#2a2d3a;
+      --hist-hover:#1f1520;--inp-border:#2a2d3a;
+      --modal-bg:rgba(0,0,0,0.7);
+      --img-zone:#1f1520;--img-zone-border:#3a1a20;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: background .3s; }
-    textarea { font-family: inherit; background: var(--card); color: var(--txt); }
-    textarea::placeholder { color: var(--txt4); }
-    textarea:focus { outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 3px #e6002318; }
-    button:active { transform: scale(0.98); }
-    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-    .dot1 { animation: bounce 1s ease-in-out infinite 0s; }
-    .dot2 { animation: bounce 1s ease-in-out infinite 0.2s; }
-    .dot3 { animation: bounce 1s ease-in-out infinite 0.4s; }
-    .hist-item:hover { background: var(--hist-hover) !important; border-color: var(--accent) !important; }
-    .exemple-chip:hover { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
-    .copy-btn:hover { background: var(--border) !important; }
-    @media (max-width: 768px) { .shortcut-hint { display: none !important; } }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .3s}
+    textarea{font-family:inherit;background:var(--bg);color:var(--txt)}
+    textarea::placeholder{color:var(--txt4)}
+    textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 3px #e6002318}
+    button:active{transform:scale(0.98)}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    .dot1{animation:bounce 1s ease-in-out infinite 0s}
+    .dot2{animation:bounce 1s ease-in-out infinite 0.2s}
+    .dot3{animation:bounce 1s ease-in-out infinite 0.4s}
+    .hist-item:hover{background:var(--hist-hover)!important;border-color:var(--accent)!important}
+    .exemple-chip:hover{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+    .copy-btn:hover{background:var(--border)!important}
+    @media(max-width:768px){.shortcut-hint{display:none!important}}
+
+    /* Zone image */
+    .img-dropzone{
+      width:100%;border:2px dashed var(--img-zone-border);border-radius:12px;
+      background:var(--img-zone);cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:7px;padding:18px;transition:all .2s;position:relative;
+      min-height:90px;
+    }
+    .img-dropzone:hover,.img-dropzone.drag{border-color:var(--accent);background:#fef2f2}
+    .dark .img-dropzone:hover,.dark .img-dropzone.drag{background:#2a1020}
+    .img-dropzone-txt{font-size:12px;font-weight:600;color:var(--txt3);text-align:center}
+    .img-dropzone-sub{font-size:10px;color:var(--txt4);text-align:center}
+    .img-preview-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;margin-top:4px}
+    .img-preview{width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:var(--border);display:block}
+    .img-remove{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:700}
+    /* Alerte description obligatoire */
+    .desc-required{
+      display:flex;align-items:center;gap:7px;
+      background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;
+      padding:9px 12px;font-size:12px;color:#92400e;font-weight:600;
+      margin-top:8px;
+    }
+    .dark .desc-required{background:#2a1f00;border-color:#78450a;color:#fbbf24}
 
     /* Bannière install */
-    .install-banner {
-      position: fixed; top: 0; left: 0; right: 0;
-      background: var(--accent); color: #fff;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px; z-index: 999;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      box-shadow: 0 2px 12px rgba(230,0,35,0.3);
-      animation: slideDown .3s ease;
-    }
-    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-    .install-banner.off { display: none; }
-    .install-banner-left { display: flex; align-items: center; gap: 10px; }
-    .install-icon { width: 36px; height: 36px; border-radius: 9px; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: var(--accent); flex-shrink: 0; }
-    .install-txt { font-size: 12px; font-weight: 600; line-height: 1.4; }
-    .install-sub { font-size: 10px; opacity: .75; }
-    .install-btn { background: #fff; color: var(--accent); border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
-    .install-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 18px; cursor: pointer; padding: 0 0 0 10px; line-height: 1; }
+    .install-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 2px 12px rgba(230,0,35,0.3);animation:slideDown .3s ease}
+    @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+    .install-banner.off{display:none}
+    .install-banner-left{display:flex;align-items:center;gap:10px}
+    .install-icon{width:36px;height:36px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--accent);flex-shrink:0}
+    .install-txt{font-size:12px;font-weight:600;line-height:1.4}
+    .install-sub{font-size:10px;opacity:.75}
+    .install-btn{background:#fff;color:var(--accent);border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0}
+    .install-close{background:none;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:0 0 0 10px;line-height:1}
 
-    /* Modal paramètres */
-    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 800; display: flex; align-items: flex-end; justify-content: center; }
-    .modal-overlay.off { display: none; }
-    .modal-sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 20px 18px 40px; width: 100%; max-width: 480px; }
-    .modal-title { font-size: 15px; font-weight: 800; color: var(--txt); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--border); }
-    .setting-row:last-child { border-bottom: none; }
-    .setting-lbl { font-size: 14px; font-weight: 600; color: var(--txt2); }
-    .setting-sub { font-size: 11px; color: var(--txt4); margin-top: 2px; }
-    .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
-    .toggle.on { background: var(--accent); }
-    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .2s; }
-    .toggle.on::after { left: 23px; }
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:var(--modal-bg);z-index:800;display:flex;align-items:flex-end;justify-content:center}
+    .modal-overlay.off{display:none}
+    .modal-sheet{background:var(--card);border-radius:20px 20px 0 0;padding:20px 18px 40px;width:100%;max-width:480px}
+    .modal-title{font-size:15px;font-weight:800;color:var(--txt);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .setting-row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+    .setting-row:last-child{border-bottom:none}
+    .setting-lbl{font-size:14px;font-weight:600;color:var(--txt2)}
+    .setting-sub{font-size:11px;color:var(--txt4);margin-top:2px}
+    .toggle{width:44px;height:24px;border-radius:12px;background:var(--border);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+    .toggle.on{background:var(--accent)}
+    .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s}
+    .toggle.on::after{left:23px}
 
     /* Toast */
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 20px; border-radius: 40px; font-size: 13px; font-weight: 700; z-index: 9000; opacity: 0; transition: opacity .3s; white-space: nowrap; }
-    .toast.show { opacity: 1; }
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:40px;font-size:13px;font-weight:700;z-index:9000;opacity:0;transition:opacity .3s;white-space:nowrap}
+    .toast.show{opacity:1}
 
-    /* Bouton paramètres flottant */
-    .settings-fab { position: fixed; bottom: 20px; right: 16px; width: 42px; height: 42px; border-radius: 50%; background: var(--card); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.1); z-index: 100; }
+    /* FAB settings */
+    .settings-fab{position:fixed;bottom:20px;right:16px;width:42px;height:42px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.1);z-index:100}
+
+    /* Badge "image" sur le bouton recherche */
+    .search-btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+    .img-badge{background:rgba(255,255,255,0.25);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700}
   </style>
 </head>
 <body>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <!-- Bannière installation -->
@@ -132,12 +146,11 @@
 </div>
 
 <!-- Bouton paramètres -->
-<button class="settings-fab" onclick="openModal()" title="Paramètres">⚙️</button>
+<button class="settings-fab" onclick="openModal()">⚙️</button>
 
 <div id="root"></div>
 
 <script>
-// ── Dark mode ──────────────────────────────────────────────────────────
 function getDark(){try{return localStorage.getItem("mr_dark")==="1";}catch{return false;}}
 function applyDark(d){
   document.getElementById("html-root").classList.toggle("dark",d);
@@ -151,7 +164,6 @@ function toggleDark(){
 }
 applyDark(getDark());
 
-// ── Modal ──────────────────────────────────────────────────────────────
 function openModal(){
   document.getElementById("modal-overlay").classList.remove("off");
   document.getElementById("tog-dark").classList.toggle("on",getDark());
@@ -163,38 +175,29 @@ document.addEventListener("DOMContentLoaded",function(){
   });
 });
 
-// ── Toast ──────────────────────────────────────────────────────────────
 function showToast(msg){
   var t=document.getElementById("toast");
   t.textContent=msg;t.classList.add("show");
   setTimeout(function(){t.classList.remove("show");},2500);
 }
 
-// ── PWA Install banner ─────────────────────────────────────────────────
 var deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",function(e){
   e.preventDefault();deferredPrompt=e;
-  // N'affiche la bannière que si pas déjà installé/refusé
   try{if(localStorage.getItem("mr_install_dismissed"))return;}catch{}
-  setTimeout(function(){
-    document.getElementById("install-banner").classList.remove("off");
-  },2000);
+  setTimeout(function(){document.getElementById("install-banner").classList.remove("off");},2000);
 });
-
 function triggerInstall(){
   document.getElementById("modal-overlay").classList.add("off");
   if(deferredPrompt){
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function(r){
-      if(r.outcome==="accepted"){showToast("🎌 MangaRef installé !");}
+      if(r.outcome==="accepted")showToast("🎌 MangaRef installé !");
       deferredPrompt=null;
       document.getElementById("install-banner").classList.add("off");
     });
-  }else{
-    showToast("💡 Menu Chrome ⋮ → Installer l'application");
-  }
+  }else{showToast("💡 Menu Chrome ⋮ → Installer l'application");}
 }
-
 document.addEventListener("DOMContentLoaded",function(){
   document.getElementById("install-btn").addEventListener("click",triggerInstall);
   document.getElementById("install-close").addEventListener("click",function(){
@@ -202,20 +205,15 @@ document.addEventListener("DOMContentLoaded",function(){
     try{localStorage.setItem("mr_install_dismissed","1");}catch{}
   });
 });
-
 window.addEventListener("appinstalled",function(){
   document.getElementById("install-banner").classList.add("off");
   showToast("🎌 MangaRef installé !");
 });
-
-// ── Service Worker ─────────────────────────────────────────────────────
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/sw.js").catch(function(){});
-}
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(function(){});}
 </script>
 
 <script type="text/babel">
-  const { useState } = React;
+  const { useState, useRef, useCallback } = React;
   const pinterestUrl = (q) => `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(q)}`;
 
   const T = {
@@ -223,7 +221,9 @@ if("serviceWorker" in navigator){
       tagline: "Décris ta scène → trouve tes références Pinterest",
       sceneLabel: "Ta scène",
       placeholder: "Ex : Un mec qui reçoit un direct dans la mâchoire...",
+      placeholderWithImg: "Décris ce que tu veux trouver comme réf pour ce croquis... (obligatoire)",
       btnSearch: "📌 Trouver mes références",
+      btnSearchImg: "📌 Analyser mon croquis",
       btnLoading: "⏳ Recherche en cours...",
       btnNew: "↺ Nouvelle recherche",
       shortcut: "⌘ + Entrée pour lancer",
@@ -235,15 +235,22 @@ if("serviceWorker" in navigator){
       senseiLabel: "Conseil du Sensei",
       errRetry: "Réessaie en décrivant mieux ta scène !",
       errConn: "Erreur de connexion, réessaie !",
+      errDesc: "Ajoute une description pour aider le Sensei à comprendre ton croquis !",
       footer: "MangaRef — Pour les artistes 🎌",
       share: "Partage à un ami artiste →",
       shareCopied: "Lien copié ✓",
+      imgZoneTxt: "📎 Ajouter un croquis ou une image",
+      imgZoneSub: "JPG, PNG, WEBP — optionnel",
+      imgRequired: "Décris ce que tu cherches pour ce croquis — le Sensei a besoin d'un contexte !",
+      imgAnalysis: "🎨 Analyse du croquis en cours...",
     },
     en: {
       tagline: "Describe your scene → find your Pinterest references",
       sceneLabel: "Your scene",
       placeholder: "Ex: A guy getting punched in the jaw...",
+      placeholderWithImg: "Describe what you're looking for in this sketch... (required)",
       btnSearch: "📌 Find my references",
+      btnSearchImg: "📌 Analyze my sketch",
       btnLoading: "⏳ Searching...",
       btnNew: "↺ New search",
       shortcut: "⌘ + Enter to search",
@@ -255,20 +262,29 @@ if("serviceWorker" in navigator){
       senseiLabel: "Sensei's Tip",
       errRetry: "Try describing your scene more precisely!",
       errConn: "Connection error, please try again!",
+      errDesc: "Add a description to help the Sensei understand your sketch!",
       footer: "MangaRef — For artists 🎌",
       share: "Share with an artist friend →",
       shareCopied: "Link copied ✓",
+      imgZoneTxt: "📎 Add a sketch or image",
+      imgZoneSub: "JPG, PNG, WEBP — optional",
+      imgRequired: "Describe what you're looking for — the Sensei needs some context!",
+      imgAnalysis: "🎨 Analyzing your sketch...",
     },
   };
 
   const EXEMPLES_FR = ["Un mec qui attrape l'autre par le col","Une main qui attrape un poignet","Un gars qui court à toute vitesse","Un mec qui serre une fille dans ses bras par derrière","Une fille avec un sourire diabolique","Deux persos qui se battent avec des épées"];
   const EXEMPLES_EN = ["A guy grabbing another by the collar","A hand grabbing a wrist","A guy running at full sprint","A man hugging a woman from behind","A girl with a menacing evil smile","Two characters fighting with swords"];
   const LOADING_MSGS_FR = ["Le Sensei consulte ses grimoires...","Analyse de la scène en cours...","Recherche des meilleures références...","Le Sensei affûte son pinceau...","Exploration des archives visuelles...","Le Sensei médite sur ta scène...","Invocation des références sacrées...","Le Sensei n'est pas payé pour ça mais bon...","Scan de 10 000 planches manga...","Le Sensei approuve... ou pas. On verra.","Channeling l'énergie du dessin...","Le Sensei boit son thé et réfléchit..."];
+  const LOADING_MSGS_IMG_FR = ["Le Sensei examine ton croquis...","Analyse des formes et de la composition...","Le Sensei déchiffre tes traits...","Identification de la scène en cours...","Le Sensei reconnaît cette pose...","Lecture du croquis en profondeur..."];
   const LOADING_MSGS_EN = ["The Sensei consults the archives...","Analyzing your scene...","Searching for the best references...","The Sensei sharpens his brush...","Exploring the visual database...","The Sensei meditates on your scene...","Summoning the sacred references...","The Sensei didn't sign up for this but here we go...","Scanning 10,000 manga pages...","The Sensei approves... maybe. We'll see.","Channeling the drawing energy...","The Sensei is sipping tea and thinking..."];
+  const LOADING_MSGS_IMG_EN = ["The Sensei is examining your sketch...","Analyzing forms and composition...","The Sensei is deciphering your lines...","Identifying the scene...","The Sensei recognizes this pose...","Deep-reading the sketch..."];
 
   const SYSTEM_FR = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
 
-Quand un artiste décrit une scène, tu génères 2 requêtes Pinterest + un conseil technique.
+Quand un artiste décrit une scène (texte seul ou texte + croquis), tu génères 2 requêtes Pinterest + un conseil technique.
+
+Si une image est fournie : analyse d'abord la scène visible (poses, actions, rapport entre les personnages), puis combine avec la description texte pour générer des requêtes précises. Si le croquis est flou ou incomplet, base-toi principalement sur la description texte.
 
 ═══ FORMULES PINTEREST TESTÉES ═══
 - PINTEREST_DESSIN : "drawing manga of" + sujet + action + contexte. MAX 5 mots après "drawing manga of".
@@ -291,11 +307,6 @@ PINTEREST_REALISTE: [MAX 5 mots, sans drawing, sans manga]
 CONSEIL: [2 phrases maximum en français, technique et précis]
 
 ═══ EXEMPLES ═══
-Scène : "un mec qui se prend un direct dans la mâchoire"
-PINTEREST_DESSIN: drawing manga of man punch jaw impact
-PINTEREST_REALISTE: man hit face jaw punch slow motion
-CONSEIL: Le moment du contact et la réaction sont deux dessins différents — choisis lequel tu veux montrer. Si c'est l'impact : la peau et la chair se déforment du côté du poing, les lèvres se retroussent.
-
 Scène : "un mec qui attrape le poignet d'une fille"
 PINTEREST_DESSIN: drawing manga of wrist grab two characters
 PINTEREST_REALISTE: wrist grab held two people
@@ -303,7 +314,9 @@ CONSEIL: La main qui saisit se referme depuis l'extérieur du poignet — le pou
 
   const SYSTEM_EN = `You are MangaRef, an expert assistant helping artists (manga, webtoon, comics, fanart) find ultra-precise visual references.
 
-When an artist describes a scene, generate 2 Pinterest queries + a technical tip.
+When an artist describes a scene (text only or text + sketch), generate 2 Pinterest queries + a technical tip.
+
+If an image is provided: first analyze the visible scene (poses, actions, relationship between characters), then combine with the text description to generate precise queries. If the sketch is rough or incomplete, rely mainly on the text description.
 
 ═══ TESTED PINTEREST FORMULAS ═══
 - PINTEREST_DESSIN: "drawing manga of" + subject + action + context. MAX 5 words after "drawing manga of".
@@ -323,23 +336,20 @@ FORBIDDEN: pose details, expressions, clothing in the query.
 ═══ RESPONSE FORMAT (STRICT) ═══
 PINTEREST_DESSIN: [drawing manga of + MAX 5 words]
 PINTEREST_REALISTE: [MAX 5 words, no drawing, no manga]
-CONSEIL: [2 sentences maximum in English, technical and precise]
-
-═══ EXAMPLES ═══
-Scene: "a guy getting punched in the jaw"
-PINTEREST_DESSIN: drawing manga of man punch jaw impact
-PINTEREST_REALISTE: man hit face jaw punch slow motion
-CONSEIL: The moment of contact and the reaction are two different drawings — choose which one you want to show. For impact: flesh deforms toward the fist, lips curl back.
-
-Scene: "a guy grabbing a girl's wrist"
-PINTEREST_DESSIN: drawing manga of wrist grab two characters
-PINTEREST_REALISTE: wrist grab held two people
-CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm side. The narrative tension comes from the contrast between the tense gripping hand and the frozen arm of the one being held.`;
+CONSEIL: [2 sentences maximum in English, technical and precise]`;
 
   const getLang = () => { try { return localStorage.getItem("mangaref_lang") || "en"; } catch { return "en"; } };
   const saveLang = (l) => { try { localStorage.setItem("mangaref_lang", l); } catch {} };
   const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
+
+  // Convertit un File en base64
+  const toBase64 = (file) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = () => rej(new Error("Read failed"));
+    r.readAsDataURL(file);
+  });
 
   function CopyButton({ text }) {
     const [copied, setCopied] = useState(false);
@@ -378,16 +388,54 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
 
   function ShareButton({ t }) {
     const [copied, setCopied] = useState(false);
-    const share = () => {
-      navigator.clipboard?.writeText(window.location.origin).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    };
+    const share = () => { navigator.clipboard?.writeText(window.location.origin).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); };
     return (
       <button onClick={share} style={{ background: "none", border: "none", fontSize: 11, color: copied ? "var(--accent)" : "var(--txt4)", cursor: "pointer", fontWeight: copied ? 700 : 400, transition: "all 0.15s" }}>
         {copied ? t.shareCopied : t.share}
       </button>
+    );
+  }
+
+  // ── Zone d'upload image ───────────────────────────────────────────────
+  function ImageZone({ t, image, setImage, imagePreview, setImagePreview }) {
+    const inputRef = useRef(null);
+    const [drag, setDrag] = useState(false);
+
+    const handleFile = (file) => {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { window.showToast && window.showToast("❌ Fichier non supporté"); return; }
+      if (file.size > 5 * 1024 * 1024) { window.showToast && window.showToast("❌ Image trop lourde (max 5 Mo)"); return; }
+      setImage(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    };
+
+    const onDrop = (e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); };
+    const onDragOver = (e) => { e.preventDefault(); setDrag(true); };
+    const onDragLeave = () => setDrag(false);
+
+    if (imagePreview) {
+      return (
+        <div className="img-preview-wrap">
+          <img src={imagePreview} alt="preview" className="img-preview" />
+          <button className="img-remove" onClick={() => { setImage(null); setImagePreview(null); }}>×</button>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`img-dropzone${drag ? " drag" : ""}`}
+        onClick={() => inputRef.current?.click()}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+      >
+        <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <p className="img-dropzone-txt">{t.imgZoneTxt}</p>
+        <p className="img-dropzone-sub">{t.imgZoneSub}</p>
+      </div>
     );
   }
 
@@ -399,11 +447,19 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
     const [history, setHistory] = useState(getHistory());
     const [lang, setLang] = useState(getLang());
     const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
+    const [image, setImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     const t = T[lang];
     const EXEMPLES = lang === "fr" ? EXEMPLES_FR : EXEMPLES_EN;
     const LOAD_MSGS = lang === "fr" ? LOADING_MSGS_FR : LOADING_MSGS_EN;
+    const LOAD_MSGS_IMG = lang === "fr" ? LOADING_MSGS_IMG_FR : LOADING_MSGS_IMG_EN;
     const SYSTEM = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
+
+    const hasImage = !!image;
+    // Si image : description obligatoire. Si pas d'image : scène obligatoire
+    const canSearch = !loading && (hasImage ? scene.trim().length > 0 : scene.trim().length > 0);
+    const showDescRequired = hasImage && scene.trim().length === 0;
 
     const parse = (text) => {
       const getLine = (label) => { const m = text.match(new RegExp(`${label}:\\s*([^\\n]+)`, "i")); return m ? m[1].trim() : ""; };
@@ -411,13 +467,43 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
       return { dessin: getLine("PINTEREST_DESSIN"), realiste: getLine("PINTEREST_REALISTE"), conseil: cm ? cm[1].trim() : "" };
     };
 
+    const reset = () => { setResult(null); setScene(""); setError(null); setImage(null); setImagePreview(null); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
     const search = async (sceneText) => {
       const q = (sceneText || scene).trim();
       if (!q || loading) return;
+      if (hasImage && !q) { setError(t.errDesc); return; }
+
       setLoading(true); setResult(null); setError(null);
-      setLoadMsg(LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)]);
+
+      // Message de chargement selon mode
+      const msgs = hasImage ? LOAD_MSGS_IMG : LOAD_MSGS;
+      setLoadMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+
       try {
-        const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 300, system: SYSTEM, messages: [{ role: "user", content: `Scène : "${q}"` }] }) });
+        let messages;
+
+        if (hasImage) {
+          // Mode image + texte — on encode l'image en base64
+          const base64 = await toBase64(image);
+          const mediaType = image.type || "image/jpeg";
+          messages = [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: `Scène : "${q}"\n\nAnalyse ce croquis et génère les requêtes Pinterest adaptées.` }
+            ]
+          }];
+        } else {
+          // Mode texte seul
+          messages = [{ role: "user", content: `Scène : "${q}"` }];
+        }
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: SYSTEM, messages })
+        });
         const data = await res.json();
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
@@ -427,15 +513,12 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
       finally { setLoading(false); }
     };
 
-    const active = scene.trim() && !loading;
-    const topPad = 56; // espace pour la bannière install si visible
-
     return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", padding: `${topPad}px 16px 100px` }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", padding: "56px 16px 100px" }}>
 
+        {/* Header */}
         <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 14 }}>
-          <div onClick={() => { setResult(null); setScene(""); setError(null); window.scrollTo({top: 0, behavior: "smooth"}); }}
-            style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
+          <div onClick={reset} style={{ display: "flex", alignItems: "baseline", cursor: "pointer" }}>
             <span style={{ fontSize: 30, fontWeight: 900, color: "var(--accent)", letterSpacing: -1 }}>Manga</span>
             <span style={{ fontSize: 30, fontWeight: 900, color: "var(--txt)", letterSpacing: -1 }}>Ref</span>
           </div>
@@ -447,21 +530,54 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
 
         <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 28, textAlign: "center" }}>{t.tagline}</p>
 
-        <div style={{ width: "100%", maxWidth: 480, background: "var(--card)", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>{t.sceneLabel}</label>
-          <textarea value={scene} onChange={e => setScene(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && search()} placeholder={t.placeholder} rows={3}
-            style={{ width: "100%", border: `2px solid var(--inp-border)`, borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "var(--txt)", background: "var(--bg)", transition: "all 0.15s" }} />
+        {/* Card principale */}
+        <div style={{ width: "100%", maxWidth: 480, background: "var(--card)", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.06)", padding: 22, marginBottom: 14 }}>
+
+          {/* Zone image */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>
+              🖼️ {lang === "fr" ? "Croquis / Référence" : "Sketch / Reference"} <span style={{ color: "var(--txt4)", fontWeight: 400, textTransform: "none" }}>— {lang === "fr" ? "optionnel" : "optional"}</span>
+            </label>
+            <ImageZone t={t} image={image} setImage={setImage} imagePreview={imagePreview} setImagePreview={setImagePreview} />
+          </div>
+
+          {/* Alerte description obligatoire si image uploadée */}
+          {showDescRequired && (
+            <div className="desc-required">
+              <span>⚠️</span>
+              <span>{t.imgRequired}</span>
+            </div>
+          )}
+
+          {/* Textarea description */}
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", margin: "14px 0 8px", textTransform: "uppercase", letterSpacing: 0.6 }}>
+            {lang === "fr" ? "Ta scène" : "Your scene"} {hasImage && <span style={{ color: "var(--accent)" }}>*</span>}
+          </label>
+          <textarea
+            value={scene}
+            onChange={e => setScene(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSearch && search()}
+            placeholder={hasImage ? t.placeholderWithImg : t.placeholder}
+            rows={hasImage ? 2 : 3}
+            style={{ width: "100%", border: `2px solid ${showDescRequired ? "var(--accent)" : "var(--inp-border)"}`, borderRadius: 10, padding: "11px 13px", fontSize: 14, lineHeight: 1.6, resize: "none", color: "var(--txt)", background: "var(--bg)", transition: "all 0.15s" }}
+          />
+
           <div className="shortcut-hint" style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 10 }}>
             <span style={{ fontSize: 11, color: "var(--txt4)" }}>{t.shortcut}</span>
           </div>
-          <div style={{ marginBottom: 10 }}></div>
-          <button onClick={() => search()} disabled={!active}
-            style={{ width: "100%", padding: "13px", background: active ? "var(--accent)" : "#fecdd3", color: active ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: active ? "pointer" : "default", transition: "all 0.15s" }}>
-            {loading ? t.btnLoading : t.btnSearch}
+
+          {/* Bouton recherche */}
+          <button
+            onClick={() => search()}
+            disabled={!canSearch}
+            style={{ width: "100%", padding: "13px", background: canSearch ? "var(--accent)" : "#fecdd3", color: canSearch ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: canSearch ? "pointer" : "default", transition: "all 0.15s" }}
+          >
+            {loading ? t.btnLoading : hasImage ? t.btnSearchImg : t.btnSearch}
           </button>
         </div>
 
-        {!result && !loading && (
+        {/* Exemples */}
+        {!result && !loading && !hasImage && (
           <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.examplesTitle}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -470,6 +586,7 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
           </div>
         )}
 
+        {/* Historique */}
         {!result && !loading && history.length > 0 && (
           <div style={{ width: "100%", maxWidth: 480, marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{t.historyTitle}</p>
@@ -478,11 +595,18 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
         )}
 
         {error && <div style={{ width: "100%", maxWidth: 480, padding: "13px 16px", background: "var(--hist-hover)", border: "1.5px solid #fecaca", borderRadius: 10, marginBottom: 12 }}><p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p></div>}
-
         {loading && <div style={{ width: "100%", maxWidth: 480 }}><LoadingDots msg={loadMsg} /></div>}
 
+        {/* Résultats */}
         {result && !loading && (
           <div style={{ width: "100%", maxWidth: 480 }}>
+            {/* Badge image utilisée */}
+            {hasImage && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, padding: "7px 12px", background: "var(--img-zone)", border: "1.5px solid var(--img-zone-border)", borderRadius: 9 }}>
+                <span style={{ fontSize: 13 }}>🎨</span>
+                <span style={{ fontSize: 11, color: "var(--txt3)", fontWeight: 600 }}>{lang === "fr" ? "Résultat basé sur ton croquis + description" : "Result based on your sketch + description"}</span>
+              </div>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               <span style={{ fontSize: 10, fontWeight: 700, color: "var(--txt4)", textTransform: "uppercase", letterSpacing: 1 }}>{t.pinterestLabel}</span>
@@ -500,7 +624,7 @@ CONSEIL: The grabbing hand closes from outside the wrist — thumb on the palm s
               </div>
             )}
             <div style={{ textAlign: "center", marginTop: 22 }}>
-              <button onClick={() => { setResult(null); setScene(""); }} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{t.btnNew}</button>
+              <button onClick={reset} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{t.btnNew}</button>
             </div>
           </div>
         )}
