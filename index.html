@@ -382,9 +382,9 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
   const EXEMPLES_FR = ["Un mec qui attrape l'autre par le col","Une main qui attrape un poignet","Un gars qui court à toute vitesse","Un mec qui serre une fille dans ses bras par derrière","Une fille avec un sourire diabolique","Deux persos qui se battent avec des épées"];
   const EXEMPLES_EN = ["A guy grabbing another by the collar","A hand grabbing a wrist","A guy running at full sprint","A man hugging a woman from behind","A girl with a menacing evil smile","Two characters fighting with swords"];
   const LOADING_MSGS_FR = ["Le Sensei consulte ses grimoires...","Analyse de la scène en cours...","Recherche des meilleures références...","Le Sensei affûte son pinceau...","Exploration des archives visuelles...","Le Sensei médite sur ta scène...","Invocation des références sacrées...","Le Sensei n'est pas payé pour ça mais bon...","Scan de 10 000 planches manga...","Le Sensei approuve... ou pas. On verra.","Channeling l'énergie du dessin...","Le Sensei boit son thé et réfléchit..."];
-  const LOADING_MSGS_IMG_FR = ["Le Sensei examine ton croquis...","Analyse des formes et de la composition...","Le Sensei déchiffre tes traits...","Identification de la scène en cours...","Le Sensei reconnaît cette pose...","Lecture du croquis en profondeur..."];
+  const LOADING_MSGS_IMG_FR = ["Opus analyse ton croquis en profondeur...","Lecture détaillée des traits et de la pose...","Décryptage précis de la composition...","Identification exacte de la posture...","Analyse visuelle de haute précision...","Le Sensei examine ton dessin pixel par pixel..."];
   const LOADING_MSGS_EN = ["The Sensei consults the archives...","Analyzing your scene...","Searching for the best references...","The Sensei sharpens his brush...","Exploring the visual database...","The Sensei meditates on your scene...","Summoning the sacred references...","The Sensei didn't sign up for this but here we go...","Scanning 10,000 manga pages...","The Sensei approves... maybe. We'll see.","Channeling the drawing energy...","The Sensei is sipping tea and thinking..."];
-  const LOADING_MSGS_IMG_EN = ["The Sensei is examining your sketch...","Analyzing forms and composition...","The Sensei is deciphering your lines...","Identifying the scene...","The Sensei recognizes this pose...","Deep-reading the sketch..."];
+  const LOADING_MSGS_IMG_EN = ["Opus is analyzing your sketch deeply...","Detailed reading of strokes and pose...","Precise composition decryption...","Exact posture identification...","High-precision visual analysis...","The Sensei examines your drawing pixel by pixel..."];
 
   const SYSTEM_FR = `Tu es MangaRef, un assistant expert qui aide les dessinateurs (manga, webtoon, comics, fanart) à trouver des références visuelles ultra-précises.
 
@@ -610,17 +610,62 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
       setLoading(true); setResult(null); setError(null);
       const msgs = hasImage ? LOAD_MSGS_IMG : LOAD_MSGS;
       setLoadMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+
       try {
-        let messages;
+        let finalUserMessage = `Scène : "${q}"`;
+
+        // ── Étape 1 : Opus analyse l'image si présente ────────────────
         if (hasImage) {
           let base64;
           try { base64 = await compressImage(image); }
           catch { setError(t.errImg); setLoading(false); return; }
-          messages = [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } }, { type: "text", text: `Scène : "${q}"\n\nAnalyse ce croquis et génère les requêtes Pinterest adaptées.` }] }];
-        } else {
-          messages = [{ role: "user", content: `Scène : "${q}"` }];
+
+          const visionPrompt = lang === "fr"
+            ? `Décris cette image en 2-3 phrases factuelles : pose exacte du corps (debout/assis/accroupi/couché), orientation (face/profil/dos), position des bras et jambes, action ou intention apparente. Sois précis et neutre, ne fais aucune supposition sur le contexte narratif. Format : juste la description, sans préambule.`
+            : `Describe this image in 2-3 factual sentences: exact body pose (standing/sitting/crouching/lying), orientation (front/profile/back), arms and legs position, visible action or intent. Be precise and neutral, no narrative assumptions. Format: just the description, no preamble.`;
+
+          const visionRes = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-opus-4-7",
+              max_tokens: 200,
+              messages: [{
+                role: "user",
+                content: [
+                  { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+                  { type: "text", text: visionPrompt }
+                ]
+              }]
+            })
+          });
+
+          if (!visionRes.ok) {
+            setError(visionRes.status === 413 ? t.errImg : t.errConn);
+            setLoading(false); return;
+          }
+
+          const visionData = await visionRes.json();
+          const imageDescription = visionData.content?.map(b => b.text || "").join("").trim() || "";
+
+          // On passe la description visuelle à Sonnet
+          finalUserMessage = lang === "fr"
+            ? `Description du croquis fourni par l'utilisateur (analyse visuelle) :\n${imageDescription}\n\nDemande de l'utilisateur : "${q}"\n\nGénère les requêtes Pinterest en te basant principalement sur la description visuelle factuelle ci-dessus.`
+            : `User's sketch description (visual analysis):\n${imageDescription}\n\nUser request: "${q}"\n\nGenerate Pinterest queries based primarily on the factual visual description above.`;
         }
-        const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: SYSTEM, messages }) });
+
+        // ── Étape 2 : Sonnet génère les requêtes Pinterest ────────────
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 400,
+            system: SYSTEM,
+            messages: [{ role: "user", content: finalUserMessage }]
+          })
+        });
+
         if (!res.ok) { setError(res.status === 413 ? t.errImg : t.errConn); setLoading(false); return; }
         const data = await res.json();
         const text = data.content?.map(b => b.text || "").join("") || "";
