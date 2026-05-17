@@ -104,7 +104,7 @@
     /* FAB settings */
     .settings-fab{position:fixed;bottom:20px;right:16px;width:42px;height:42px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.1);z-index:100}
 
-    /* Badge "image" sur le bouton recherche */
+    /* Badge image sur résultats */
     .search-btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
     .img-badge{background:rgba(255,255,255,0.25);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700}
   </style>
@@ -178,6 +178,7 @@ function showToast(msg){
   t.textContent=msg;t.classList.add("show");
   setTimeout(function(){t.classList.remove("show");},2500);
 }
+window.showToast = showToast;
 
 var deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",function(e){
@@ -233,6 +234,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       senseiLabel: "Conseil du Sensei",
       errRetry: "Réessaie en décrivant mieux ta scène !",
       errConn: "Erreur de connexion, réessaie !",
+      errImg: "Image trop lourde — essaie avec une image plus petite ou compresse-la d'abord.",
       errDesc: "Ajoute une description pour aider le Sensei à comprendre ton croquis !",
       footer: "MangaRef — Pour les artistes 🎌",
       share: "Partage à un ami artiste →",
@@ -260,6 +262,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       senseiLabel: "Sensei's Tip",
       errRetry: "Try describing your scene more precisely!",
       errConn: "Connection error, please try again!",
+      errImg: "Image too large — try a smaller image or compress it first.",
       errDesc: "Add a description to help the Sensei understand your sketch!",
       footer: "MangaRef — For artists 🎌",
       share: "Share with an artist friend →",
@@ -341,12 +344,32 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
-  // Convertit un File en base64
-  const toBase64 = (file) => new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(",")[1]);
-    r.onerror = () => rej(new Error("Read failed"));
-    r.readAsDataURL(file);
+  // ── Compression image via canvas (max 800px, JPEG 70%) ─────────────
+  const compressImage = (file) => new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 800;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error("Compression failed")); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = () => reject(new Error("Read failed"));
+        reader.readAsDataURL(blob);
+      }, "image/jpeg", 0.70);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Load failed")); };
+    img.src = url;
   });
 
   function CopyButton({ text }) {
@@ -394,15 +417,16 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     );
   }
 
-  // ── Zone d'upload image ───────────────────────────────────────────────
+  // ── Zone d'upload image ─────────────────────────────────────────────
   function ImageZone({ t, image, setImage, imagePreview, setImagePreview }) {
     const inputRef = useRef(null);
     const [drag, setDrag] = useState(false);
 
     const handleFile = (file) => {
       if (!file) return;
-      if (!file.type.startsWith("image/")) { window.showToast && window.showToast("❌ Fichier non supporté"); return; }
-      if (file.size > 5 * 1024 * 1024) { window.showToast && window.showToast("❌ Image trop lourde (max 5 Mo)"); return; }
+      if (!file.type.startsWith("image/")) { window.showToast("❌ Fichier non supporté"); return; }
+      // Limite client à 8 Mo (laisse de la marge avant compression)
+      if (file.size > 8 * 1024 * 1024) { window.showToast("❌ Image trop lourde (max 8 Mo)"); return; }
       setImage(file);
       const url = URL.createObjectURL(file);
       setImagePreview(url);
@@ -455,8 +479,7 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     const SYSTEM = lang === "fr" ? SYSTEM_FR : SYSTEM_EN;
 
     const hasImage = !!image;
-    // Si image : description obligatoire. Si pas d'image : scène obligatoire
-    const canSearch = !loading && (hasImage ? scene.trim().length > 0 : scene.trim().length > 0);
+    const canSearch = !loading && scene.trim().length > 0;
     const showDescRequired = hasImage && scene.trim().length === 0;
 
     const parse = (text) => {
@@ -470,11 +493,9 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     const search = async (sceneText) => {
       const q = (sceneText || scene).trim();
       if (!q || loading) return;
-      if (hasImage && !q) { setError(t.errDesc); return; }
 
       setLoading(true); setResult(null); setError(null);
 
-      // Message de chargement selon mode
       const msgs = hasImage ? LOAD_MSGS_IMG : LOAD_MSGS;
       setLoadMsg(msgs[Math.floor(Math.random() * msgs.length)]);
 
@@ -482,18 +503,24 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         let messages;
 
         if (hasImage) {
-          // Mode image + texte — on encode l'image en base64
-          const base64 = await toBase64(image);
-          const mediaType = image.type || "image/jpeg";
+          // Compression avant envoi
+          let base64;
+          try {
+            base64 = await compressImage(image);
+          } catch {
+            setError(t.errImg);
+            setLoading(false);
+            return;
+          }
+
           messages = [{
             role: "user",
             content: [
-              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
               { type: "text", text: `Scène : "${q}"\n\nAnalyse ce croquis et génère les requêtes Pinterest adaptées.` }
             ]
           }];
         } else {
-          // Mode texte seul
           messages = [{ role: "user", content: `Scène : "${q}"` }];
         }
 
@@ -502,13 +529,25 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: SYSTEM, messages })
         });
+
+        // Vérification explicite du statut HTTP
+        if (!res.ok) {
+          if (res.status === 413) { setError(t.errImg); }
+          else { setError(t.errConn); }
+          setLoading(false);
+          return;
+        }
+
         const data = await res.json();
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
         if (!parsed.dessin) { setError(t.errRetry); }
         else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
-      } catch { setError(t.errConn); }
-      finally { setLoading(false); }
+      } catch {
+        setError(t.errConn);
+      } finally {
+        setLoading(false);
+      }
     };
 
     return (
@@ -539,12 +578,12 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
             <ImageZone t={t} image={image} setImage={setImage} imagePreview={imagePreview} setImagePreview={setImagePreview} />
           </div>
 
-          {/* Alerte description obligatoire si image uploadée */}
+          {/* Hint discret si image uploadée */}
           {hasImage && (
             <div className="desc-required">{t.imgRequired}</div>
           )}
 
-          {/* Textarea description */}
+          {/* Textarea */}
           <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--txt2)", margin: "14px 0 8px", textTransform: "uppercase", letterSpacing: 0.6 }}>
             {lang === "fr" ? "Ta scène" : "Your scene"} {hasImage && <span style={{ color: "var(--accent)" }}>*</span>}
           </label>
@@ -595,7 +634,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         {/* Résultats */}
         {result && !loading && (
           <div style={{ width: "100%", maxWidth: 480 }}>
-            {/* Badge image utilisée */}
             {hasImage && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, padding: "7px 12px", background: "var(--img-zone)", border: "1.5px solid var(--img-zone-border)", borderRadius: 9 }}>
                 <span style={{ fontSize: 13 }}>🎨</span>
