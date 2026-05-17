@@ -1,6 +1,5 @@
-// ─── MangaRef Service Worker v1 ──────────────────────────────────────
-const CACHE = "mangaref-v2";
-
+// ─── MangaRef Service Worker v3 ──────────────────────────────────────
+const CACHE = "mangaref-v3";
 const PRECACHE = [
   "/",
   "/index.html",
@@ -8,7 +7,6 @@ const PRECACHE = [
   "/icon-192.png",
   "/icon-512.png"
 ];
-
 self.addEventListener("install", function(event) {
   event.waitUntil(
     caches.open(CACHE).then(function(cache) {
@@ -20,7 +18,6 @@ self.addEventListener("install", function(event) {
     })
   );
 });
-
 self.addEventListener("activate", function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
@@ -33,12 +30,10 @@ self.addEventListener("activate", function(event) {
     })
   );
 });
-
 self.addEventListener("fetch", function(event) {
   if (event.request.method !== "GET") return;
   // Ne pas cacher les appels API
   if (event.request.url.includes("/api/")) return;
-
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) return cached;
