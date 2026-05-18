@@ -450,28 +450,36 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
   const compressImage = (file) => new Promise((resolve, reject) => {
+    console.log("🖼️ Compression start — file:", file.name, "size:", (file.size/1024).toFixed(1), "KB, type:", file.type);
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
+      console.log("🖼️ Image loaded — dimensions:", img.width, "x", img.height);
       const MAX = 600;
       let { width, height } = img;
       if (width > MAX || height > MAX) {
         if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
         else { width = Math.round(width * MAX / height); height = MAX; }
       }
+      console.log("🖼️ Resized to:", width, "x", height);
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
       canvas.toBlob(blob => {
-        if (!blob) { reject(new Error("Compression failed")); return; }
+        if (!blob) { reject(new Error("canvas.toBlob returned null (format non supporté ?)")); return; }
+        console.log("🖼️ Blob created — size:", (blob.size/1024).toFixed(1), "KB");
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = () => reject(new Error("Read failed"));
+        reader.onload = () => {
+          const base64 = reader.result.split(",")[1];
+          console.log("🖼️ Base64 length:", base64.length, "chars (~", (base64.length/1024).toFixed(1), "KB)");
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error("FileReader failed: " + (reader.error?.message || "unknown")));
         reader.readAsDataURL(blob);
       }, "image/jpeg", 0.55);
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Load failed")); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image.onerror — fichier illisible ou corrompu")); };
     img.src = url;
   });
 
@@ -616,9 +624,17 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
 
         // ── Étape 1 : Opus analyse l'image si présente ────────────────
         if (hasImage) {
+          console.log("━━━━━━━━━━━━ DEBUG IMAGE FLOW ━━━━━━━━━━━━");
           let base64;
-          try { base64 = await compressImage(image); }
-          catch { setError(t.errImg); setLoading(false); return; }
+          try {
+            base64 = await compressImage(image);
+            console.log("✅ Compression OK — base64 length:", base64.length);
+          } catch (err) {
+            console.error("❌ Erreur compression:", err);
+            setError(`Compression: ${err.message}`);
+            setLoading(false);
+            return;
+          }
 
           const visionPrompt = lang === "fr"
             ? `Décris ce croquis en 3-4 phrases factuelles et précises. Couvre OBLIGATOIREMENT ces 4 points dans l'ordre :
@@ -636,29 +652,39 @@ Sois précis et neutre, ne suppose AUCUN contexte narratif (pas de "combat", "ac
 
 Be precise and neutral, do NOT assume any narrative context (no "fighting", "action", "drama"). Format: just descriptions, no preamble or numbering.`;
 
+          const visionBody = JSON.stringify({
+            model: "claude-opus-4-7",
+            max_tokens: 350,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+                { type: "text", text: visionPrompt }
+              ]
+            }]
+          });
+          console.log("📦 Vision body size:", (visionBody.length / 1024).toFixed(1), "KB");
+
           const visionRes = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "claude-opus-4-7",
-              max_tokens: 350,
-              messages: [{
-                role: "user",
-                content: [
-                  { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-                  { type: "text", text: visionPrompt }
-                ]
-              }]
-            })
+            body: visionBody
           });
 
+          console.log("📡 Vision response status:", visionRes.status);
+
           if (!visionRes.ok) {
-            setError(visionRes.status === 413 ? t.errImg : t.errConn);
-            setLoading(false); return;
+            const errText = await visionRes.text();
+            console.error(`❌ Vision API ${visionRes.status}:`, errText);
+            setError(`API ${visionRes.status}: ${errText.slice(0, 120)}`);
+            setLoading(false);
+            return;
           }
 
           const visionData = await visionRes.json();
+          console.log("✅ Vision response data:", visionData);
           const imageDescription = visionData.content?.map(b => b.text || "").join("").trim() || "";
+          console.log("🎨 Image description extracted:", imageDescription);
 
           // On passe la description visuelle à Sonnet
           finalUserMessage = lang === "fr"
@@ -667,6 +693,7 @@ Be precise and neutral, do NOT assume any narrative context (no "fighting", "act
         }
 
         // ── Étape 2 : Sonnet génère les requêtes Pinterest ────────────
+        console.log("━━━━━━━━━━━━ STEP 2: SONNET ━━━━━━━━━━━━");
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -678,13 +705,25 @@ Be precise and neutral, do NOT assume any narrative context (no "fighting", "act
           })
         });
 
-        if (!res.ok) { setError(res.status === 413 ? t.errImg : t.errConn); setLoading(false); return; }
+        console.log("📡 Sonnet response status:", res.status);
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error(`❌ Sonnet API ${res.status}:`, errText);
+          setError(`API ${res.status}: ${errText.slice(0, 120)}`);
+          setLoading(false);
+          return;
+        }
         const data = await res.json();
+        console.log("✅ Sonnet response data:", data);
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
         if (!parsed.dessin) { setError(t.errRetry); }
         else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
-      } catch { setError(t.errConn); }
+      } catch (err) {
+        console.error("❌ Erreur globale search():", err);
+        setError(`${t.errConn} (${err.message})`);
+      }
       finally { setLoading(false); }
     };
 
