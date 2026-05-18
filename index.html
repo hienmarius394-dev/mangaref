@@ -621,15 +621,27 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           catch { setError(t.errImg); setLoading(false); return; }
 
           const visionPrompt = lang === "fr"
-            ? `Décris cette image en 2-3 phrases factuelles : pose exacte du corps (debout/assis/accroupi/couché), orientation (face/profil/dos), position des bras et jambes, action ou intention apparente. Sois précis et neutre, ne fais aucune supposition sur le contexte narratif. Format : juste la description, sans préambule.`
-            : `Describe this image in 2-3 factual sentences: exact body pose (standing/sitting/crouching/lying), orientation (front/profile/back), arms and legs position, visible action or intent. Be precise and neutral, no narrative assumptions. Format: just the description, no preamble.`;
+            ? `Décris ce croquis en 3-4 phrases factuelles et précises. Couvre OBLIGATOIREMENT ces 4 points dans l'ordre :
+1. POSE GLOBALE : debout / assis / accroupi / couché / agenouillé / en saut / en course
+2. ANGLE DE VUE : de face / de profil (gauche/droit) / de dos / 3/4 face / 3/4 dos / contre-plongée / plongée
+3. BRAS ET MAINS : position exacte (tendus en avant / sur les côtés / levés / croisés / le long du corps) + ce qu'ils font (saisir / pointer / tenir / lâcher / vide)
+4. JAMBES ET CENTRE DE GRAVITÉ : poids sur quelle jambe, jambes écartées ou serrées, penché en avant/arrière
+
+Sois précis et neutre, ne suppose AUCUN contexte narratif (pas de "combat", "action", "drama"). Format : juste les descriptions, sans préambule ni numérotation.`
+            : `Describe this sketch in 3-4 precise factual sentences. MUST cover these 4 points in order:
+1. GLOBAL POSE: standing / sitting / crouching / lying / kneeling / jumping / running
+2. VIEW ANGLE: front view / profile (left/right) / back / 3/4 front / 3/4 back / low angle / high angle
+3. ARMS AND HANDS: exact position (extended forward / sides / raised / crossed / along body) + what they're doing (grabbing / pointing / holding / releasing / empty)
+4. LEGS AND CENTER OF GRAVITY: weight on which leg, legs apart or together, leaning forward/backward
+
+Be precise and neutral, do NOT assume any narrative context (no "fighting", "action", "drama"). Format: just descriptions, no preamble or numbering.`;
 
           const visionRes = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "claude-opus-4-7",
-              max_tokens: 200,
+              max_tokens: 350,
               messages: [{
                 role: "user",
                 content: [
