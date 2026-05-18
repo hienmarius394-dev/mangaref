@@ -106,7 +106,7 @@
     .desc-required{font-size:11px;color:var(--txt4);font-style:italic;margin-top:6px;padding-left:2px;}
     .dark .desc-required{color:var(--txt3);opacity:0.6}
 
-    /* Message Sensei en bêta (vision Opus) */
+    /* Message Sensei honnête (vision IA limitée) */
     .sensei-beta{
       display:flex;align-items:flex-start;gap:8px;
       padding:9px 12px;
@@ -116,7 +116,6 @@
       font-size:11.5px;line-height:1.45;
       color:var(--txt2);font-style:italic;
     }
-    .sensei-beta-icon{flex-shrink:0;font-size:13px;line-height:1.4}
 
     /* Bannière "ouvrir dans vrai navigateur" */
     .browser-banner{
@@ -363,7 +362,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       imgZoneTxt: "📎 Ajouter un croquis ou une image",
       imgZoneSub: "JPG, PNG, WEBP — optionnel",
       imgRequired: "Croquis détecté ! Décris la scène pour que le Sensei cerne mieux la pose, l'ambiance ou le style recherché 🎯",
-      senseiBeta: "🤓 Le Sensei a parfois besoin de ses lunettes — l'analyse de croquis est encore en apprentissage !",
+      senseiBeta: "🎌 Ton croquis aide, mais c'est surtout ta description qui fait la différence — l'IA a encore du mal à lire les dessins.",
     },
     en: {
       tagline: "Describe your scene → find your Pinterest references",
@@ -389,7 +388,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       imgZoneTxt: "📎 Add a sketch or image",
       imgZoneSub: "JPG, PNG, WEBP — optional",
       imgRequired: "Describe what you're looking for — the Sensei needs some context!",
-      senseiBeta: "🤓 The Sensei sometimes needs his glasses — sketch analysis is still learning!",
+      senseiBeta: "🎌 Your sketch helps, but your description makes the real difference — AI still struggles to read drawings.",
     },
   };
 
@@ -566,10 +565,9 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           {lang === "fr" ? "Ta scène" : "Your scene"} <span style={{ color: "var(--accent)" }}>*</span>
         </label>
 
-        {/* Message Sensei beta — visible uniquement quand une image est uploadée */}
+        {/* Message Sensei honnête — visible uniquement quand une image est uploadée */}
         {hasImage && (
           <div className="sensei-beta">
-            <span className="sensei-beta-icon">🎌</span>
             <span>{t.senseiBeta}</span>
           </div>
         )}
@@ -642,11 +640,11 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
       setLoadMsg(msgs[Math.floor(Math.random() * msgs.length)]);
 
       try {
-        let finalUserMessage = `Scène : "${q}"`;
+        let userContent;
 
-        // ── Étape 1 : Opus analyse l'image si présente ────────────────
+        // ── Préparation du message envoyé à Sonnet ─────────────────
         if (hasImage) {
-          console.log("━━━━━━━━━━━━ DEBUG IMAGE FLOW ━━━━━━━━━━━━");
+          console.log("━━━━━━━━━━━━ DEBUG IMAGE FLOW (SONNET SOLO) ━━━━━━━━━━━━");
           let base64;
           try {
             base64 = await compressImage(image);
@@ -658,107 +656,34 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
             return;
           }
 
-          const visionPrompt = lang === "fr"
-            ? `Tu es un analyste de pose pour le dessin de figure. Décris UNIQUEMENT la pose corporelle visible dans cette image.
+          // Texte qui accompagne l'image : description user en PRIORITÉ
+          const textWithImage = lang === "fr"
+            ? `Description de l'utilisateur (PRIORITAIRE) : "${q}"\n\nUne image est jointe en complément visuel. Base-toi PRINCIPALEMENT sur la description texte ci-dessus pour générer les requêtes Pinterest. L'image n'est qu'un bonus pour préciser l'angle ou le genre du personnage, mais ne doit JAMAIS contredire la description texte. Si l'image semble incohérente avec la description, ignore-la.`
+            : `User description (PRIORITY): "${q}"\n\nAn image is attached as visual complement. Base your Pinterest queries PRIMARILY on the text description above. The image is just a bonus to refine angle or character gender, but must NEVER contradict the text description. If the image seems inconsistent with the description, ignore it.`;
 
-RÈGLES CRITIQUES :
-- IGNORE complètement : tout texte, annotations, étiquettes, flèches, zones colorées (rouge/bleu), noms de muscles, caractères chinois/japonais/coréens
-- IGNORE le style artistique (croquis, manga, planche anatomique, photo) — concentre-toi uniquement sur la POSE
-- IGNORE tout contexte narratif — ne dis JAMAIS "combat", "action", "drama", "émotion"
-- Si plusieurs poses visibles (planche de référence), décris UNIQUEMENT la plus grande / principale
-- Décris ce que tu VOIS, n'interprète pas
-
-ANALYSE OBLIGATOIRE EN 5 POINTS :
-1. SUJET : homme / femme / figure androgyne (si flou → "figure")
-2. POSITION GLOBALE : debout / assis / accroupi / agenouillé / couché / penché / en saut / en course / appuyé
-3. SUPPORT : sur quoi le corps repose-t-il ? (tabouret, chaise, sol, mur, rien, autre figure)
-4. ANGLE DE VUE : de face / de dos / profil gauche / profil droit / 3/4 face / 3/4 dos / contre-plongée / plongée
-5. MEMBRES :
-   - Bras : tendus en avant / levés / le long du corps / croisés / posés sur quelque chose
-   - Jambes : droites / pliées / croisées / écartées / une pliée une tendue
-   - Tête : regarde devant / en bas / en haut / sur le côté
-
-FORMAT DE SORTIE (3-4 phrases factuelles, sans préambule, sans numérotation) :
-[Sujet] est [position] sur/contre [support]. Vue de [angle]. Les bras sont [position]. Les jambes sont [position], la tête [direction].
-
-Exemple pour une femme assise sur un tabouret jambes croisées, vue 3/4 face :
-"Une femme est assise sur un tabouret haut. Vue de 3/4 face. Le bras droit repose sur le genou avant, le bras gauche pend sur le côté. La jambe droite est pliée et croisée sur la gauche, la tête regarde droit devant."`
-            : `You are a pose analyst for figure drawing. Describe ONLY the body pose visible in this image.
-
-CRITICAL RULES:
-- IGNORE all text, annotations, labels, arrows, colored zones (red/blue), muscle names, Chinese/Japanese/Korean characters
-- IGNORE the artistic style (sketch, manga, anatomy chart, photo) — focus only on the POSE
-- IGNORE any narrative context — never say "fighting", "action", "drama", "emotion"
-- If multiple poses visible (reference sheet), describe ONLY the main/largest one
-- Describe what you SEE, do not interpret
-
-MANDATORY 5-POINT ANALYSIS:
-1. SUBJECT: man / woman / androgynous figure (if unclear → "figure")
-2. GLOBAL POSITION: standing / sitting / crouching / kneeling / lying / leaning / jumping / running
-3. SUPPORT: what is the body resting on? (stool, chair, ground, wall, nothing, another figure)
-4. VIEW ANGLE: front / back / left profile / right profile / 3-quarter front / 3-quarter back / low angle / high angle
-5. LIMBS:
-   - Arms: extended forward / raised / down / crossed / resting on something
-   - Legs: straight / bent / crossed / apart / one bent one straight
-   - Head: looking forward / down / up / sideways
-
-OUTPUT FORMAT (3-4 factual sentences, no preamble, no numbering):
-[Subject] is [position] on/against [support]. View is [angle]. Arms are [position]. Legs are [position], head [direction].
-
-Example for a woman sitting on a stool with crossed legs, 3/4 front view:
-"A woman is sitting on a tall stool. View is 3-quarter front. Right arm rests on the front knee, left arm hangs at the side. Right leg is bent and crossed over the left, head faces forward."`;
-
-          const visionBody = JSON.stringify({
-            model: "claude-opus-4-7",
-            max_tokens: 350,
-            messages: [{
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-                { type: "text", text: visionPrompt }
-              ]
-            }]
-          });
-          console.log("📦 Vision body size:", (visionBody.length / 1024).toFixed(1), "KB");
-
-          const visionRes = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: visionBody
-          });
-
-          console.log("📡 Vision response status:", visionRes.status);
-
-          if (!visionRes.ok) {
-            const errText = await visionRes.text();
-            console.error(`❌ Vision API ${visionRes.status}:`, errText);
-            setError(`API ${visionRes.status}: ${errText.slice(0, 120)}`);
-            setLoading(false);
-            return;
-          }
-
-          const visionData = await visionRes.json();
-          console.log("✅ Vision response data:", visionData);
-          const imageDescription = visionData.content?.map(b => b.text || "").join("").trim() || "";
-          console.log("🎨 Image description extracted:", imageDescription);
-
-          // On passe la description visuelle à Sonnet
-          finalUserMessage = lang === "fr"
-            ? `Description du croquis fourni par l'utilisateur (analyse visuelle) :\n${imageDescription}\n\nDemande de l'utilisateur : "${q}"\n\nGénère les requêtes Pinterest en te basant principalement sur la description visuelle factuelle ci-dessus.`
-            : `User's sketch description (visual analysis):\n${imageDescription}\n\nUser request: "${q}"\n\nGenerate Pinterest queries based primarily on the factual visual description above.`;
+          userContent = [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+            { type: "text", text: textWithImage }
+          ];
+        } else {
+          // Texte seul : flow original intact
+          userContent = `Scène : "${q}"`;
         }
 
-        // ── Étape 2 : Sonnet génère les requêtes Pinterest ────────────
-        console.log("━━━━━━━━━━━━ STEP 2: SONNET ━━━━━━━━━━━━");
+        // ── Appel unique à Sonnet (gère texte + image directement) ─────
+        console.log("━━━━━━━━━━━━ SONNET CALL ━━━━━━━━━━━━");
+        const requestBody = JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 400,
+          system: SYSTEM,
+          messages: [{ role: "user", content: userContent }]
+        });
+        console.log("📦 Body size:", (requestBody.length / 1024).toFixed(1), "KB");
+
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 400,
-            system: SYSTEM,
-            messages: [{ role: "user", content: finalUserMessage }]
-          })
+          body: requestBody
         });
 
         console.log("📡 Sonnet response status:", res.status);
