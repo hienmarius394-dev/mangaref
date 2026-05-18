@@ -463,29 +463,24 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
   const compressImage = (file) => new Promise((resolve, reject) => {
-    console.log("🖼️ Compression start — file:", file.name, "size:", (file.size/1024).toFixed(1), "KB, type:", file.type);
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      console.log("🖼️ Image loaded — dimensions:", img.width, "x", img.height);
       const MAX = 600;
       let { width, height } = img;
       if (width > MAX || height > MAX) {
         if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
         else { width = Math.round(width * MAX / height); height = MAX; }
       }
-      console.log("🖼️ Resized to:", width, "x", height);
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error("canvas.toBlob returned null (format non supporté ?)")); return; }
-        console.log("🖼️ Blob created — size:", (blob.size/1024).toFixed(1), "KB");
         const reader = new FileReader();
         reader.onload = () => {
           const base64 = reader.result.split(",")[1];
-          console.log("🖼️ Base64 length:", base64.length, "chars (~", (base64.length/1024).toFixed(1), "KB)");
           resolve(base64);
         };
         reader.onerror = () => reject(new Error("FileReader failed: " + (reader.error?.message || "unknown")));
@@ -644,11 +639,9 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
 
         // ── Préparation du message envoyé à Sonnet ─────────────────
         if (hasImage) {
-          console.log("━━━━━━━━━━━━ DEBUG IMAGE FLOW (SONNET SOLO) ━━━━━━━━━━━━");
           let base64;
           try {
             base64 = await compressImage(image);
-            console.log("✅ Compression OK — base64 length:", base64.length);
           } catch (err) {
             console.error("❌ Erreur compression:", err);
             setError(`Compression: ${err.message}`);
@@ -671,14 +664,12 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         }
 
         // ── Appel unique à Sonnet (gère texte + image directement) ─────
-        console.log("━━━━━━━━━━━━ SONNET CALL ━━━━━━━━━━━━");
         const requestBody = JSON.stringify({
           model: "claude-sonnet-4-6",
           max_tokens: 400,
           system: SYSTEM,
           messages: [{ role: "user", content: userContent }]
         });
-        console.log("📦 Body size:", (requestBody.length / 1024).toFixed(1), "KB");
 
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -686,7 +677,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           body: requestBody
         });
 
-        console.log("📡 Sonnet response status:", res.status);
 
         if (!res.ok) {
           const errText = await res.text();
@@ -696,7 +686,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           return;
         }
         const data = await res.json();
-        console.log("✅ Sonnet response data:", data);
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
         if (!parsed.dessin) { setError(t.errRetry); }
