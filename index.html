@@ -355,7 +355,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       senseiLabel: "Conseil du Sensei",
       errRetry: "Réessaie en décrivant mieux ta scène !",
       errConn: "Erreur de connexion, réessaie !",
-      errImg: "Image trop lourde — essaie avec une image plus petite ou compresse-la d'abord.",
+      errImg: "Format d'image non supporté. Essaie d'enregistrer ton image en JPG ou PNG depuis ta galerie avant de la réessayer.",
       footer: "MangaRef — Pour les artistes 🎌",
       share: "Partage à un ami artiste →",
       shareCopied: "Lien copié ✓",
@@ -381,7 +381,7 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       senseiLabel: "Sensei's Tip",
       errRetry: "Try describing your scene more precisely!",
       errConn: "Connection error, please try again!",
-      errImg: "Image too large — try a smaller image or compress it first.",
+      errImg: "Image format not supported. Try saving your image as JPG or PNG from your gallery first.",
       footer: "MangaRef — For artists 🎌",
       share: "Share with an artist friend →",
       shareCopied: "Link copied ✓",
@@ -462,34 +462,73 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
-  const compressImage = (file) => new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 600;
-      let { width, height } = img;
+  // Compression robuste avec triple fallback
+  // 1) createImageBitmap (moderne, gère les formats exotiques mobile)
+  // 2) Image() classique (fallback pour vieux navigateurs)
+  // 3) Message d'erreur clair si tout échoue
+  const compressImage = async (file) => {
+    const MAX = 600;
+    const QUALITY = 0.55;
+
+    // Helper : dessine bitmap/image sur canvas puis encode en base64
+    const drawToBase64 = (source, srcWidth, srcHeight) => new Promise((resolve, reject) => {
+      let width = srcWidth, height = srcHeight;
       if (width > MAX || height > MAX) {
         if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
         else { width = Math.round(width * MAX / height); height = MAX; }
       }
       const canvas = document.createElement("canvas");
-      canvas.width = width; canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
+      canvas.width = width;
+      canvas.height = height;
+      try {
+        canvas.getContext("2d").drawImage(source, 0, 0, width, height);
+      } catch (err) {
+        reject(new Error("Canvas draw failed: " + err.message));
+        return;
+      }
       canvas.toBlob(blob => {
-        if (!blob) { reject(new Error("canvas.toBlob returned null (format non supporté ?)")); return; }
+        if (!blob) { reject(new Error("canvas.toBlob returned null")); return; }
         const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result.split(",")[1];
-          resolve(base64);
-        };
-        reader.onerror = () => reject(new Error("FileReader failed: " + (reader.error?.message || "unknown")));
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = () => reject(new Error("FileReader failed"));
         reader.readAsDataURL(blob);
-      }, "image/jpeg", 0.55);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image.onerror — fichier illisible ou corrompu")); };
-    img.src = url;
-  });
+      }, "image/jpeg", QUALITY);
+    });
+
+    // ── Méthode 1 : createImageBitmap (préférée, robuste mobile) ──
+    if (typeof createImageBitmap === "function") {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const base64 = await drawToBase64(bitmap, bitmap.width, bitmap.height);
+        bitmap.close?.();
+        return base64;
+      } catch (err) {
+        // Si createImageBitmap échoue, on bascule sur la méthode classique
+        console.error("createImageBitmap failed, falling back to Image():", err);
+      }
+    }
+
+    // ── Méthode 2 : Image() HTML classique (fallback) ──
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = async () => {
+        try {
+          const base64 = await drawToBase64(img, img.width, img.height);
+          URL.revokeObjectURL(url);
+          resolve(base64);
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Format d'image non supporté — essaie d'enregistrer l'image en JPG ou PNG standard"));
+      };
+      img.src = url;
+    });
+  };
 
   function CopyButton({ text }) {
     const [copied, setCopied] = useState(false);
@@ -644,7 +683,7 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
             base64 = await compressImage(image);
           } catch (err) {
             console.error("❌ Erreur compression:", err);
-            setError(`Compression: ${err.message}`);
+            setError(t.errImg);
             setLoading(false);
             return;
           }
