@@ -462,10 +462,12 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
   const getHistory = () => { try { return JSON.parse(localStorage.getItem("mangaref_history") || "[]"); } catch { return []; } };
   const addToHistory = (s) => { try { const h = getHistory().filter(x => x !== s).slice(0, 4); localStorage.setItem("mangaref_history", JSON.stringify([s, ...h])); } catch {} };
 
-  // Compression robuste avec triple fallback
-  // 1) createImageBitmap (moderne, gère les formats exotiques mobile)
-  // 2) Image() classique (fallback pour vieux navigateurs)
-  // 3) Message d'erreur clair si tout échoue
+  // Compression robuste v3 : détection format réel + lavage + quadruple fallback
+  // 1) "Lave" le fichier en relisant ses octets et reconstruisant un blob typé
+  // 2) createImageBitmap sur le blob lavé (préféré, robuste mobile)
+  // 3) Image() classique sur le blob lavé (fallback)
+  // 4) Image() avec data URL forcée (dernier recours pour Pinterest/Android)
+  // 5) Message d'erreur clair si tout échoue
   const compressImage = async (file) => {
     const MAX = 600;
     const QUALITY = 0.55;
@@ -495,23 +497,51 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
       }, "image/jpeg", QUALITY);
     });
 
-    // ── Méthode 1 : createImageBitmap (préférée, robuste mobile) ──
+    // ── Étape 0 : détection du VRAI format via les magic bytes ──
+    // Les fichiers Pinterest/Android ont souvent une extension .jpg mais sont en WebP/PNG
+    let realMimeType = file.type || "image/jpeg";
+    try {
+      const headerBuffer = await file.slice(0, 16).arrayBuffer();
+      const bytes = new Uint8Array(headerBuffer);
+      // JPEG: FF D8 FF
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) realMimeType = "image/jpeg";
+      // PNG: 89 50 4E 47
+      else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) realMimeType = "image/png";
+      // WebP: RIFF....WEBP
+      else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) realMimeType = "image/webp";
+      // GIF: GIF8
+      else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) realMimeType = "image/gif";
+      // AVIF: ftyp...avif
+      else if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) realMimeType = "image/avif";
+    } catch {
+      // Si la lecture des bytes échoue, on garde le type d'origine
+    }
+
+    // ── Étape 1 : LAVAGE — relit tous les octets et reconstruit un Blob propre ──
+    let cleanFile = file;
+    try {
+      const fullBuffer = await file.arrayBuffer();
+      cleanFile = new Blob([fullBuffer], { type: realMimeType });
+    } catch (err) {
+      console.error("Lavage du fichier échoué, on garde l'original:", err);
+    }
+
+    // ── Méthode 2 : createImageBitmap sur le blob lavé ──
     if (typeof createImageBitmap === "function") {
       try {
-        const bitmap = await createImageBitmap(file);
+        const bitmap = await createImageBitmap(cleanFile);
         const base64 = await drawToBase64(bitmap, bitmap.width, bitmap.height);
         bitmap.close?.();
         return base64;
       } catch (err) {
-        // Si createImageBitmap échoue, on bascule sur la méthode classique
-        console.error("createImageBitmap failed, falling back to Image():", err);
+        console.error("createImageBitmap (clean) failed:", err);
       }
     }
 
-    // ── Méthode 2 : Image() HTML classique (fallback) ──
-    return new Promise((resolve, reject) => {
+    // ── Méthode 3 : Image() HTML sur le blob lavé via URL.createObjectURL ──
+    const tryWithObjectURL = () => new Promise((resolve, reject) => {
       const img = new Image();
-      const url = URL.createObjectURL(file);
+      const url = URL.createObjectURL(cleanFile);
       img.onload = async () => {
         try {
           const base64 = await drawToBase64(img, img.width, img.height);
@@ -522,11 +552,34 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           reject(err);
         }
       };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Format d'image non supporté — essaie d'enregistrer l'image en JPG ou PNG standard"));
-      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image.onerror via ObjectURL")); };
       img.src = url;
+    });
+
+    try {
+      return await tryWithObjectURL();
+    } catch (err) {
+      console.error("Image() via ObjectURL failed:", err);
+    }
+
+    // ── Méthode 4 : Image() via Data URL (dernier recours, plus lourd mais marche presque partout) ──
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = async () => {
+          try {
+            const base64 = await drawToBase64(img, img.width, img.height);
+            resolve(base64);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error("Format d'image non supporté"));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+      reader.readAsDataURL(cleanFile);
     });
   };
 
