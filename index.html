@@ -363,7 +363,8 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       imgZoneTxt: "📎 Ajouter un croquis ou une image",
       imgZoneSub: "JPG, PNG, WEBP — optionnel",
       imgRequired: "Croquis détecté ! Décris la scène pour que le Sensei cerne mieux la pose, l'ambiance ou le style recherché 🎯",
-      senseiBeta: "🎌 Ton croquis aide, mais c'est surtout ta description qui fait la différence — l'IA a encore du mal à lire les dessins.",
+      senseiBeta: "🎌 Ton croquis aide, mais c'est surtout ta description qui fait la différence. Certaines images peuvent être refusées par l'IA.",
+      errImgBlocked: "L'IA n'a pas pu analyser cette image. C'est probablement dû à son contenu (pose suggestive ou trop mature). Essaie sans l'image ou décris la scène en texte.",
     },
     en: {
       tagline: "Describe your scene → find your Pinterest references",
@@ -389,7 +390,8 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       imgZoneTxt: "📎 Add a sketch or image",
       imgZoneSub: "JPG, PNG, WEBP — optional",
       imgRequired: "Describe what you're looking for — the Sensei needs some context!",
-      senseiBeta: "🎌 Your sketch helps, but your description makes the real difference — AI still struggles to read drawings.",
+      senseiBeta: "🎌 Your sketch helps, but your description makes the real difference. Some images may be refused by the AI.",
+      errImgBlocked: "The AI couldn't analyze this image. It's likely due to its content (suggestive or mature pose). Try without the image or describe the scene in text.",
     },
   };
 
@@ -669,6 +671,16 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     const [loadMsg, setLoadMsg] = useState(LOADING_MSGS_FR[0]);
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const errorRef = React.useRef(null);
+
+    // Auto-scroll vers l'erreur quand elle apparaît
+    React.useEffect(() => {
+      if (error && errorRef.current) {
+        setTimeout(() => {
+          errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
+    }, [error]);
 
     const t = T[lang];
     const EXEMPLES = lang === "fr" ? EXEMPLES_FR : EXEMPLES_EN;
@@ -741,7 +753,25 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         if (!res.ok) {
           const errText = await res.text();
           console.error(`❌ Sonnet API ${res.status}:`, errText);
-          setError(`API ${res.status}: ${errText.slice(0, 120)}`);
+          // Détection des erreurs de modération (image refusée par les filtres de contenu)
+          const lowered = errText.toLowerCase();
+          const isModeration = hasImage && (
+            lowered.includes("policy") ||
+            lowered.includes("safety") ||
+            lowered.includes("content") ||
+            lowered.includes("moderation") ||
+            lowered.includes("inappropriate") ||
+            lowered.includes("blocked") ||
+            lowered.includes("filter") ||
+            lowered.includes("explicit") ||
+            lowered.includes("sexual") ||
+            res.status === 400 // Anthropic renvoie souvent 400 sur contenu refusé
+          );
+          if (isModeration) {
+            setError(t.errImgBlocked);
+          } else {
+            setError(`API ${res.status}: ${errText.slice(0, 120)}`);
+          }
           setLoading(false);
           return;
         }
@@ -787,6 +817,12 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
             style={{ width: "100%", padding: "13px", background: canSearch ? "var(--accent)" : "#fecdd3", color: canSearch ? "#fff" : "#fca5a5", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: canSearch ? "pointer" : "default", transition: "all 0.15s" }}>
             {loading ? t.btnLoading : hasImage ? t.btnSearchImg : t.btnSearch}
           </button>
+
+          {error && (
+            <div ref={errorRef} style={{ padding: "13px 16px", background: "var(--hist-hover)", border: "1.5px solid #fecaca", borderRadius: 10, marginTop: 12 }}>
+              <p style={{ color: "#ef4444", fontSize: 13, lineHeight: 1.5 }}>⚠️ {error}</p>
+            </div>
+          )}
         </div>
 
         {!result && !loading && !hasImage && (
@@ -805,7 +841,6 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
           </div>
         )}
 
-        {error && <div style={{ width: "100%", maxWidth: 480, padding: "13px 16px", background: "var(--hist-hover)", border: "1.5px solid #fecaca", borderRadius: 10, marginBottom: 12 }}><p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {error}</p></div>}
         {loading && <div style={{ width: "100%", maxWidth: 480 }}><LoadingDots msg={loadMsg} /></div>}
 
         {result && !loading && (
