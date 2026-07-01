@@ -21,6 +21,14 @@
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:image" content="https://www.mangaref.app/icon-512.png" />
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-30WW3HLW3N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-30WW3HLW3N');
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -564,6 +572,7 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
     return (
       <div style={{ marginBottom: 10 }}>
         <a href={href} target="_blank" rel="noopener noreferrer" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+          onClick={() => { if (window.gtag) window.gtag('event', 'pinterest_link_click', { link_label: label }); }}
           style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: hov ? `${color}12` : "var(--card)", border: `2px solid ${hov ? color : "var(--border)"}`, borderRadius: 14, textDecoration: "none", transition: "all 0.15s" }}>
           <div style={{ width: 44, height: 44, borderRadius: 11, background: hov ? color : `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, transition: "background 0.15s" }}>{emoji}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -779,7 +788,10 @@ CONSEIL: [2 sentences maximum in English, technical and precise]`;
         const text = data.content?.map(b => b.text || "").join("") || "";
         const parsed = parse(text);
         if (!parsed.dessin) { setError(t.errRetry); }
-        else { setResult(parsed); addToHistory(q); setHistory(getHistory()); }
+        else {
+          setResult(parsed); addToHistory(q); setHistory(getHistory());
+          if (window.gtag) window.gtag('event', 'pinterest_query_generated', { has_sketch: hasImage, language: lang });
+        }
       } catch (err) {
         console.error("❌ Erreur globale search():", err);
         setError(`${t.errConn} (${err.message})`);
