@@ -1,5 +1,5 @@
 // ─── MangaRef Service Worker v3 ──────────────────────────────────────
-const CACHE = "mangaref-v18";
+const CACHE = "mangaref-v19";
 const PRECACHE = [
   "/",
   "/index.html",
